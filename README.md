@@ -1,10 +1,12 @@
-JsonFx.NET - JSON Serializer
+# JsonFx.NET - JSON Serializer
 
 This old copy of JsonFx adds 3 features:
 
 1. Ability to serialize/deserialize polymorphic collections.
 2. Lenient type coercion where it tries to find the type even if the type hint is wrong or incomplete.
-3. Ability to pass the data to be serialized into a HashAlgorithm to generate a checksum of the data.
+3. Ability to pass the data to be serialized into a HashAlgorithm, to generate a checksum of a class, but only its serialized data.
+
+----
 
 The JsonFx.NET JSON parser/serializer functions similarly to the XmlSerializer in .NET
 
@@ -26,8 +28,9 @@ Serializes C# 3.0 LINQ Queries as JSON arrays of objects (by enumerating the res
 
 Follows Postel's Law ("Be conservative in what you do; be liberal in what you accept from others.")
 by accepting handling many non-JSON JavaScript concepts:
-	- Common literals such as "Infinity", "NaN", and "undefined"
-	- Ignores block and line comments when deserializing
+
+- Common literals such as "Infinity", "NaN", and "undefined"
+- Ignores block and line comments when deserializing
 
 This version has been modified to work better with Unity3D, especially when building for the iPhone.
 No additional .dll dependencies (such as System.Xml) are required. Additional in the sense that Unity does not include them per default.
