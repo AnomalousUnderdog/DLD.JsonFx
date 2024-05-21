@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,6 +27,7 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
+
 #endregion License
 
 #if !UNITY_5_3_OR_NEWER

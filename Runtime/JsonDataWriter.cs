@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,19 +27,19 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
-using System.IO;
-using System.Text;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.IO;
+using System.Text;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// An <see cref="IDataWriter"/> adapter for <see cref="JsonWriter"/>
@@ -54,7 +55,7 @@ namespace Pathfinding.Serialization.JsonFx
 
 		#region Fields
 
-		private readonly JsonWriterSettings Settings;
+		readonly JsonWriterSettings _settings;
 
 		#endregion Fields
 
@@ -66,11 +67,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <param name="settings">JsonWriterSettings</param>
 		public JsonDataWriter(JsonWriterSettings settings)
 		{
-			if (settings == null)
-			{
-				throw new ArgumentNullException("settings");
-			}
-			this.Settings = settings;
+			_settings = settings ?? throw new ArgumentNullException(nameof(settings));
 		}
 
 		#endregion Init
@@ -80,26 +77,17 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <summary>
 		/// Gets the content encoding
 		/// </summary>
-		public Encoding ContentEncoding
-		{
-			get { return Encoding.UTF8; }
-		}
+		public Encoding ContentEncoding => Encoding.UTF8;
 
 		/// <summary>
 		/// Gets the content type
 		/// </summary>
-		public string ContentType
-		{
-			get { return JsonDataWriter.JsonMimeType; }
-		}
+		public string ContentType => JsonMimeType;
 
 		/// <summary>
 		/// Gets the file extension
 		/// </summary>
-		public string FileExtension
-		{
-			get { return JsonDataWriter.JsonFileExtension; }
-		}
+		public string FileExtension => JsonFileExtension;
 
 		/// <summary>
 		/// Serializes the data object to the output
@@ -108,7 +96,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <param name="data"></param>
 		public void Serialize(TextWriter output, object data)
 		{
-			new JsonWriter(output, this.Settings).Write(data);
+			new JsonWriter(output, _settings).Write(data);
 		}
 
 		#endregion IDataSerializer Members

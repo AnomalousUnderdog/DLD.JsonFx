@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,19 +27,17 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
-using System.IO;
-using System.Text;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System.IO;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// A common interface for data deserializers
@@ -50,10 +49,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <summary>
 		/// Gets the content type of the serialized data
 		/// </summary>
-		string ContentType
-		{
-			get;
-		}
+		string ContentType { get; }
 
 		#endregion Properties
 
@@ -64,7 +60,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </summary>
 		/// <param name="input"></param>
 		/// <param name="data"></param>
-		object Deserialize(TextReader input, Type data);
+		object Deserialize(TextReader input, TP data);
 
 		#endregion Methods
 	}

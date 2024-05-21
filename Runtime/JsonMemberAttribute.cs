@@ -1,14 +1,12 @@
 using System;
-namespace Pathfinding.Serialization.JsonFx
+
+namespace DLD.JsonFx
 {
-	/** Explicitly declare this member to be serialized.
-	 * \see JsonOptInAttribute
-	 */
+	/// <summary>
+	/// Explicitly declare this member to be serialized.
+	/// <seealso cref="JsonOptInAttribute"/>
+	/// </summary>
 	public class JsonMemberAttribute : Attribute
 	{
-		public JsonMemberAttribute ()
-		{
-		}
 	}
 }
-

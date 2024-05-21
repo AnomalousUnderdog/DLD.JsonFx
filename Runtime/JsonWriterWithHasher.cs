@@ -1,4 +1,5 @@
 ﻿#region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,13 +27,15 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
+
 #endregion License
 
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// Writer for producing JSON data like <see cref="JsonWriter"/>, but also sends that same data to a
@@ -45,25 +48,27 @@ namespace Pathfinding.Serialization.JsonFx
 		#region Fields
 
 		// from https://stackoverflow.com/a/3621316
-		protected readonly System.Security.Cryptography.HashAlgorithm Hasher;
+		protected readonly HashAlgorithm Hasher;
 		protected readonly byte[] HasherByteBuffer = new byte[16];
 
 		#endregion Fields
 
 		#region Init
 
-		public JsonWriterWithHasher(TextWriter output, JsonWriterSettings settings, string hashAlgorithm) : base(output, settings)
+		public JsonWriterWithHasher(TextWriter output, JsonWriterSettings settings, string hashAlgorithm) : base(output,
+			settings)
 		{
-			Hasher = System.Security.Cryptography.HashAlgorithm.Create(hashAlgorithm);
+			Hasher = HashAlgorithm.Create(hashAlgorithm);
 			Hasher?.Initialize();
 		}
 
-		public JsonWriterWithHasher(string outputFileName, JsonWriterSettings settings, string hashAlgorithm) : base(outputFileName, settings)
+		public JsonWriterWithHasher(string outputFileName, JsonWriterSettings settings, string hashAlgorithm) : base(
+			outputFileName, settings)
 		{
 #if WINDOWS_STORE && !DEBUG
 			throw new System.NotSupportedException ("Not supported on this platform");
 #else
-			Hasher = System.Security.Cryptography.HashAlgorithm.Create(hashAlgorithm);
+			Hasher = HashAlgorithm.Create(hashAlgorithm);
 			Hasher?.Initialize();
 #endif
 		}
@@ -116,7 +121,7 @@ namespace Pathfinding.Serialization.JsonFx
 		{
 			base.Write(value);
 
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
@@ -170,7 +175,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
@@ -183,7 +188,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
@@ -196,7 +201,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
@@ -210,7 +215,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
@@ -224,7 +229,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 

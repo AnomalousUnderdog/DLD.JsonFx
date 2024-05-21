@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,9 +27,8 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
@@ -36,7 +36,7 @@ using TP = System.Reflection.TypeInfo;
 using TP = System.Type;
 #endif
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// Allows classes to control their own JSON serialization

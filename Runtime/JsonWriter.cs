@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,16 +27,9 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
+
 #endregion License
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Globalization;
-using System.IO;
-using System.Reflection;
-using System.Text;
 #if !UNITY_5_3_OR_NEWER
 using System.Xml;
 #endif
@@ -45,10 +39,16 @@ using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Reflection;
+using System.Text;
+using TCU = DLD.JsonFx.TypeCoercionUtility;
 
-using TCU = Pathfinding.Serialization.JsonFx.TypeCoercionUtility;
-
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// Writer for producing JSON data
@@ -64,19 +64,19 @@ namespace Pathfinding.Serialization.JsonFx
 		const string ErrorMaxDepth = "The maxiumum depth of {0} was exceeded. Check for cycles in object graph.";
 		const string ErrorIDictionaryEnumerator = "Types which implement Generic IDictionary<TKey, TValue> must have an IEnumerator which implements IDictionaryEnumerator. ({0})";
 
-		const BindingFlags defaultBinding = BindingFlags.Default;
-		const BindingFlags allBinding = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+		const BindingFlags DefaultBinding = BindingFlags.Default;
+		const BindingFlags AllBinding = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
 		#endregion Constants
 
 		#region Fields
 
-		readonly TextWriter Writer;
-		JsonWriterSettings settings;
-		int depth;
-		Dictionary<object,int> previouslySerializedObjects;
+		readonly TextWriter _writer;
+		JsonWriterSettings _settings;
+		int _depth;
+		Dictionary<object, int> _previouslySerializedObjects;
 
-		public ReferenceHandlerWriter referenceHandler;
+		public ReferenceHandlerWriter ReferenceHandler;
 
 		#endregion Fields
 
@@ -96,22 +96,25 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </summary>
 		/// <param name="output">TextWriter for writing</param>
 		/// <param name="settings">JsonWriterSettings</param>
-		public JsonWriter (TextWriter output, JsonWriterSettings settings)
+		public JsonWriter(TextWriter output, JsonWriterSettings settings)
 		{
-			if (output == null) {
-				throw new ArgumentNullException ("output");
-			}
-			if (settings == null) {
-				throw new ArgumentNullException ("settings");
+			if (output == null)
+			{
+				throw new ArgumentNullException("output");
 			}
 
-			Writer = output;
-			this.settings = settings;
-			Writer.NewLine = this.settings.NewLine;
-			
+			if (settings == null)
+			{
+				throw new ArgumentNullException("settings");
+			}
+
+			_writer = output;
+			_settings = settings;
+			_writer.NewLine = _settings.NewLine;
+
 			if (settings.HandleCyclicReferences)
 			{
-				previouslySerializedObjects = new Dictionary<object, int> ();
+				_previouslySerializedObjects = new Dictionary<object, int>();
 			}
 		}
 
@@ -135,14 +138,15 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				throw new ArgumentNullException("output");
 			}
+
 			if (settings == null)
 			{
 				throw new ArgumentNullException("settings");
 			}
 
-			Writer = new StreamWriter(output, Encoding.UTF8);
-			this.settings = settings;
-			Writer.NewLine = this.settings.NewLine;
+			_writer = new StreamWriter(output, Encoding.UTF8);
+			_settings = settings;
+			_writer.NewLine = _settings.NewLine;
 		}
 
 		/// <summary>
@@ -164,7 +168,7 @@ namespace Pathfinding.Serialization.JsonFx
 				throw new ArgumentNullException("settings");
 			}
 
-			this.settings = settings;
+			_settings = settings;
 #endif
 		}
 
@@ -182,15 +186,16 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				throw new ArgumentNullException("outputFileName");
 			}
+
 			if (settings == null)
 			{
 				throw new ArgumentNullException("settings");
 			}
 
 			Stream stream = new FileStream(outputFileName, FileMode.Create, FileAccess.Write, FileShare.Read);
-			Writer = new StreamWriter(stream, Encoding.UTF8);
-			this.settings = settings;
-			Writer.NewLine = this.settings.NewLine;
+			_writer = new StreamWriter(stream, Encoding.UTF8);
+			_settings = settings;
+			_writer.NewLine = _settings.NewLine;
 #endif
 		}
 
@@ -214,14 +219,15 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				throw new ArgumentNullException("output");
 			}
+
 			if (settings == null)
 			{
 				throw new ArgumentNullException("settings");
 			}
 
-			Writer = new StringWriter(output, CultureInfo.InvariantCulture);
-			this.settings = settings;
-			Writer.NewLine = this.settings.NewLine;
+			_writer = new StringWriter(output, CultureInfo.InvariantCulture);
+			_settings = settings;
+			_writer.NewLine = _settings.NewLine;
 		}
 
 		#endregion Init
@@ -231,24 +237,22 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <summary>
 		/// Gets the underlying TextWriter
 		/// </summary>
-		public TextWriter TextWriter
-		{
-			get { return Writer; }
-		}
+		public TextWriter TextWriter => _writer;
 
 		/// <summary>
 		/// Gets and sets the JsonWriterSettings
 		/// </summary>
 		public JsonWriterSettings Settings
 		{
-			get { return settings; }
+			get => _settings;
 			set
 			{
 				if (value == null)
 				{
 					value = new JsonWriterSettings();
 				}
-				settings = value;
+
+				_settings = value;
 			}
 		}
 
@@ -282,7 +286,7 @@ namespace Pathfinding.Serialization.JsonFx
 			Write(value, false);
 		}
 
-		protected virtual void Write(object value, bool isProperty, Type fieldType = null )
+		protected virtual void Write(object value, bool isProperty, Type fieldType = null)
 		{
 			if (isProperty)
 			{
@@ -302,25 +306,29 @@ namespace Pathfinding.Serialization.JsonFx
 				{
 					if (isProperty)
 					{
-						depth++;
-						if (depth > settings.MaxDepth)
+						_depth++;
+						if (_depth > _settings.MaxDepth)
 						{
-							throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] {settings.MaxDepth}));
+							throw new JsonSerializationException(string.Format(ErrorMaxDepth,
+								new object[] { _settings.MaxDepth }));
 						}
+
 						WriteLine();
 					}
+
 					jsonSerializable.WriteJson(this);
 				}
 				finally
 				{
 					if (isProperty)
 					{
-						depth--;
+						_depth--;
 					}
 				}
+
 				return;
 			}
-			
+
 			// must test enumerations before value types
 			var valueAsEnum = value as Enum;
 			if (valueAsEnum != null)
@@ -332,7 +340,7 @@ namespace Pathfinding.Serialization.JsonFx
 			// Type.GetTypeCode() allows us to more efficiently switch type
 			// plus cannot use 'is' for ValueTypes
 			var type = value.GetType();
-				
+
 #if WINDOWS_STORE
 			if (Type.Equals (type, typeof(bool)))
 				{
@@ -522,9 +530,10 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 #endif
 
-			var converter = Settings.GetConverter (type);
-			if ( converter != null && (depth != 0 || converter.convertAtDepthZero) ) {
-				converter.Write (this, type,value);
+			var converter = Settings.GetConverter(type);
+			if (converter != null && (_depth != 0 || converter.ConvertAtDepthZero))
+			{
+				converter.Write(this, type, value);
 				return;
 			}
 
@@ -563,60 +572,77 @@ namespace Pathfinding.Serialization.JsonFx
 				{
 					if (isProperty)
 					{
-						depth++;
-						if (depth > settings.MaxDepth)
+						_depth++;
+						if (_depth > _settings.MaxDepth)
 						{
-							throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] {settings.MaxDepth}));
+							throw new JsonSerializationException(string.Format(ErrorMaxDepth,
+								new object[] { _settings.MaxDepth }));
 						}
+
 						WriteLine();
 					}
+
 					WriteObject(valueAsDictionary);
 				}
 				finally
 				{
 					if (isProperty)
 					{
-						depth--;
+						_depth--;
 					}
 				}
+
 				return;
 			}
-				
+
 			//if (!Type.Equals (TCU.GetTypeInfo(type).GetInterface (JsonReader.TypeGenericIDictionary), null))
-			if ( TCU.GetTypeInfo(typeof(IDictionary)).IsAssignableFrom (TCU.GetTypeInfo(value.GetType())) )
+			if (TypeCoercionUtility.GetTypeInfo(typeof(IDictionary))
+			    .IsAssignableFrom(TypeCoercionUtility.GetTypeInfo(value.GetType())))
 			{
-				try {
-					if (isProperty) {
-						depth++;
-						if (depth > settings.MaxDepth) {
-							throw new JsonSerializationException (string.Format (ErrorMaxDepth, new object[] { settings.MaxDepth }));
+				try
+				{
+					if (isProperty)
+					{
+						_depth++;
+						if (_depth > _settings.MaxDepth)
+						{
+							throw new JsonSerializationException(string.Format(ErrorMaxDepth,
+								new object[] { _settings.MaxDepth }));
 						}
-						WriteLine ();
+
+						WriteLine();
 					}
 
-					WriteDictionary ((IEnumerable)value);
-				} finally {
-					if (isProperty) {
-						depth--;
+					WriteDictionary((IEnumerable)value);
+				}
+				finally
+				{
+					if (isProperty)
+					{
+						_depth--;
 					}
 				}
+
 				return;
 			}
 
 			var list = value as IList;
-			if (list != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>)) {
+			if (list != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
+			{
 				// Is List<T>
-				var memberType = type.GetGenericArguments () [0];
+				var memberType = type.GetGenericArguments()[0];
 
 				try
 				{
 					if (isProperty)
 					{
-						depth++;
-						if (depth > settings.MaxDepth)
+						_depth++;
+						if (_depth > _settings.MaxDepth)
 						{
-							throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] {settings.MaxDepth}));
+							throw new JsonSerializationException(string.Format(ErrorMaxDepth,
+								new object[] { _settings.MaxDepth }));
 						}
+
 						WriteLine();
 					}
 
@@ -626,9 +652,10 @@ namespace Pathfinding.Serialization.JsonFx
 				{
 					if (isProperty)
 					{
-						depth--;
+						_depth--;
 					}
 				}
+
 				return;
 			}
 
@@ -649,23 +676,26 @@ namespace Pathfinding.Serialization.JsonFx
 				{
 					if (isProperty)
 					{
-						depth++;
-						if (depth > settings.MaxDepth)
+						_depth++;
+						if (_depth > _settings.MaxDepth)
 						{
-							throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] {settings.MaxDepth}));
+							throw new JsonSerializationException(string.Format(ErrorMaxDepth,
+								new object[] { _settings.MaxDepth }));
 						}
+
 						WriteLine();
 					}
-						
+
 					WriteArray(enumerable, type.GetElementType());
 				}
 				finally
 				{
 					if (isProperty)
 					{
-						depth--;
+						_depth--;
 					}
 				}
+
 				return;
 			}
 
@@ -674,20 +704,23 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				if (isProperty)
 				{
-					depth++;
-					if (depth > settings.MaxDepth)
+					_depth++;
+					if (_depth > _settings.MaxDepth)
 					{
-						throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] {settings.MaxDepth}));
+						throw new JsonSerializationException(string.Format(ErrorMaxDepth,
+							new object[] { _settings.MaxDepth }));
 					}
+
 					WriteLine();
 				}
-				WriteObject(value, type,true, fieldType);
+
+				WriteObject(value, type, true, fieldType);
 			}
 			finally
 			{
 				if (isProperty)
 				{
-					depth--;
+					_depth--;
 				}
 			}
 		}
@@ -707,9 +740,9 @@ namespace Pathfinding.Serialization.JsonFx
 
 			StringBuilder builder = new StringBuilder();
 
-			// Loop through each byte of the binary data 
+			// Loop through each byte of the binary data
 			// and format each one as a hexadecimal string
-			for (int i=0; i<value.Length; i++)
+			for (int i = 0; i < value.Length; i++)
 			{
 				builder.Append(value[i].ToString("x2"));
 			}
@@ -720,9 +753,9 @@ namespace Pathfinding.Serialization.JsonFx
 
 		public virtual void Write(DateTime value)
 		{
-			if (settings.DateTimeSerializer != null)
+			if (_settings.DateTimeSerializer != null)
 			{
-				settings.DateTimeSerializer(this, value);
+				_settings.DateTimeSerializer(this, value);
 				return;
 			}
 
@@ -736,13 +769,13 @@ namespace Pathfinding.Serialization.JsonFx
 				case DateTimeKind.Utc:
 				{
 					// UTC DateTime in ISO-8601
-					Write(string.Format("{0:s}Z", new object[] {value}));
+					Write(string.Format("{0:s}Z", new object[] { value }));
 					break;
 				}
 				default:
 				{
 					// DateTime in ISO-8601
-					Write(string.Format("{0:s}", new object[] {value}));
+					Write(string.Format("{0:s}", new object[] { value }));
 					break;
 				}
 			}
@@ -763,7 +796,7 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				var flags = GetFlagList(type, value);
 				var flagNames = new string[flags.Length];
-				for (int i=0; i<flags.Length; i++)
+				for (int i = 0; i < flags.Length; i++)
 				{
 					flagNames[i] = JsonNameAttribute.GetJsonName(flags[i]);
 					if (string.IsNullOrEmpty(flagNames[i]))
@@ -771,6 +804,7 @@ namespace Pathfinding.Serialization.JsonFx
 						flagNames[i] = flags[i].ToString("f");
 					}
 				}
+
 				enumName = string.Join(", ", flagNames);
 			}
 			else
@@ -796,62 +830,63 @@ namespace Pathfinding.Serialization.JsonFx
 			int start = 0,
 				length = value.Length;
 
-			Writer.Write(JsonReader.OperatorStringDelim);
+			_writer.Write(JsonReader.OperatorStringDelim);
 
-			for (int i=start; i<length; i++)
+			for (int i = start; i < length; i++)
 			{
 				char ch = value[i];
 
 				if (ch <= '\u001F' ||
-					ch >= '\u007F' ||
-					ch == '<' || // improves compatibility within script blocks
-					ch == JsonReader.OperatorStringDelim ||
-					ch == JsonReader.OperatorCharEscape)
+				    ch >= '\u007F' ||
+				    ch == '<' || // improves compatibility within script blocks
+				    ch == JsonReader.OperatorStringDelim ||
+				    ch == JsonReader.OperatorCharEscape)
 				{
 					if (i > start)
 					{
-						Writer.Write(value.Substring(start, i-start));
+						_writer.Write(value.Substring(start, i - start));
 					}
-					start = i+1;
+
+					start = i + 1;
 
 					switch (ch)
 					{
 						case JsonReader.OperatorStringDelim:
 						case JsonReader.OperatorCharEscape:
 						{
-							Writer.Write(JsonReader.OperatorCharEscape);
-							Writer.Write(ch);
+							_writer.Write(JsonReader.OperatorCharEscape);
+							_writer.Write(ch);
 							continue;
 						}
 						case '\b':
 						{
-							Writer.Write("\\b");
+							_writer.Write("\\b");
 							continue;
 						}
 						case '\f':
 						{
-							Writer.Write("\\f");
+							_writer.Write("\\f");
 							continue;
 						}
 						case '\n':
 						{
-							Writer.Write("\\n");
+							_writer.Write("\\n");
 							continue;
 						}
 						case '\r':
 						{
-							Writer.Write("\\r");
+							_writer.Write("\\r");
 							continue;
 						}
 						case '\t':
 						{
-							Writer.Write("\\t");
+							_writer.Write("\\t");
 							continue;
 						}
 						default:
 						{
-							Writer.Write("\\u");
-							Writer.Write(char.ConvertToUtf32(value, i).ToString("X4"));
+							_writer.Write("\\u");
+							_writer.Write(char.ConvertToUtf32(value, i).ToString("X4"));
 							continue;
 						}
 					}
@@ -860,10 +895,10 @@ namespace Pathfinding.Serialization.JsonFx
 
 			if (length > start)
 			{
-				Writer.Write(value.Substring(start, length-start));
+				_writer.Write(value.Substring(start, length - start));
 			}
 
-			Writer.Write(JsonReader.OperatorStringDelim);
+			_writer.Write(JsonReader.OperatorStringDelim);
 		}
 
 		#endregion Public Methods
@@ -872,32 +907,32 @@ namespace Pathfinding.Serialization.JsonFx
 
 		public virtual void Write(bool value)
 		{
-			Writer.Write(value ? JsonReader.LiteralTrue : JsonReader.LiteralFalse);
+			_writer.Write(value ? JsonReader.LiteralTrue : JsonReader.LiteralFalse);
 		}
 
 		public virtual void Write(byte value)
 		{
-			Writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
+			_writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
 		}
 
 		public virtual void Write(sbyte value)
 		{
-			Writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
+			_writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
 		}
 
 		public virtual void Write(short value)
 		{
-			Writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
+			_writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
 		}
 
 		public virtual void Write(ushort value)
 		{
-			Writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
+			_writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
 		}
 
 		public virtual void Write(int value)
 		{
-			Writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
+			_writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
 		}
 
 		public virtual void Write(uint value)
@@ -909,7 +944,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			Writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
+			_writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
 		}
 
 		public virtual void Write(long value)
@@ -921,7 +956,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			Writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
+			_writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
 		}
 
 		public virtual void Write(ulong value)
@@ -933,7 +968,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			Writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
+			_writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
 		}
 
 		public virtual void Write(float value)
@@ -944,7 +979,7 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 			else
 			{
-				Writer.Write(value.ToString("r", CultureInfo.InvariantCulture));
+				_writer.Write(value.ToString("r", CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -956,7 +991,7 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 			else
 			{
-				Writer.Write(value.ToString("r", CultureInfo.InvariantCulture));
+				_writer.Write(value.ToString("r", CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -969,7 +1004,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			Writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
+			_writer.Write(value.ToString("g", CultureInfo.InvariantCulture));
 		}
 
 		public virtual void Write(char value)
@@ -1004,20 +1039,23 @@ namespace Pathfinding.Serialization.JsonFx
 
 		#region Writer Methods
 
-		protected internal virtual void WriteArray(IEnumerable value, Type elementType )
+		protected internal virtual void WriteArray(IEnumerable value, Type elementType)
 		{
 			var appendDelim = false;
 
 			WriteOperatorArrayStart();
 
 			// Are the references to the elements of this array tracked
-			bool handledRef = referenceHandler != null && !Equals (elementType, null) && referenceHandler.IsHandled (elementType);
+			bool handledRef = ReferenceHandler != null &&
+			                  !Equals(elementType, null) &&
+			                  ReferenceHandler.IsHandled(elementType);
 
-			depth++;
-			if (depth > settings.MaxDepth)
+			_depth++;
+			if (_depth > _settings.MaxDepth)
 			{
-				throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] {settings.MaxDepth}));
+				throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] { _settings.MaxDepth }));
 			}
+
 			try
 			{
 				foreach (object item in value)
@@ -1030,28 +1068,32 @@ namespace Pathfinding.Serialization.JsonFx
 					{
 						appendDelim = true;
 					}
-						
+
 					WriteLine();
 
-					if (!handledRef || item == null) {
+					if (!handledRef || item == null)
+					{
 						// Reference is not tracked, serialize it normally
 						WriteArrayItem(item, elementType);
-					} else {
+					}
+					else
+					{
 						// Reference is not owned by this field, write a reference to it
 						// Arrays/Lists cannot own references
-						WriteArrayItem ("@" + referenceHandler.GetReferenceID (item), typeof(string));
+						WriteArrayItem("@" + ReferenceHandler.GetReferenceID(item), typeof(string));
 					}
 				}
 			}
 			finally
 			{
-				depth--;
+				_depth--;
 			}
 
 			if (appendDelim)
 			{
 				WriteLine();
 			}
+
 			WriteOperatorArrayEnd();
 		}
 
@@ -1070,15 +1112,16 @@ namespace Pathfinding.Serialization.JsonFx
 			IDictionaryEnumerator enumerator = value.GetEnumerator() as IDictionaryEnumerator;
 			if (enumerator == null)
 			{
-				throw new JsonSerializationException(string.Format(ErrorIDictionaryEnumerator, new object[] {value.GetType()}));
+				throw new JsonSerializationException(string.Format(ErrorIDictionaryEnumerator,
+					new object[] { value.GetType() }));
 			}
 
 			bool appendDelim = false;
 
-			if (settings.HandleCyclicReferences)
+			if (_settings.HandleCyclicReferences)
 			{
-				int prevIndex = 0;
-				if (previouslySerializedObjects.TryGetValue (value, out prevIndex)) {
+				if (_previouslySerializedObjects.TryGetValue(value, out int prevIndex))
+				{
 					WriteOperatorObjectStart();
 					WriteObjectProperty("@ref", prevIndex);
 					WriteLine();
@@ -1086,15 +1129,15 @@ namespace Pathfinding.Serialization.JsonFx
 					return;
 				}
 
-				previouslySerializedObjects.Add (value, previouslySerializedObjects.Count);
+				_previouslySerializedObjects.Add(value, _previouslySerializedObjects.Count);
 			}
 
 			WriteOperatorObjectStart();
 
-			depth++;
-			if (depth > settings.MaxDepth)
+			_depth++;
+			if (_depth > _settings.MaxDepth)
 			{
-				throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] {settings.MaxDepth}));
+				throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] { _settings.MaxDepth }));
 			}
 
 			try
@@ -1110,28 +1153,34 @@ namespace Pathfinding.Serialization.JsonFx
 						appendDelim = true;
 					}
 
-					bool handledRef = referenceHandler != null && enumerator.Entry.Value != null && referenceHandler.IsHandled (enumerator.Entry.Value.GetType());
+					bool handledRef = ReferenceHandler != null &&
+					                  enumerator.Entry.Value != null &&
+					                  ReferenceHandler.IsHandled(enumerator.Entry.Value.GetType());
 
-					if (!handledRef) {
+					if (!handledRef)
+					{
 						// Reference is not tracked, serialize it normally
 						WriteObjectProperty(Convert.ToString(enumerator.Entry.Key), enumerator.Entry.Value);
-					} else {
+					}
+					else
+					{
 						// Reference is not owned by this field, write a reference to it
 						// Dictionaries cannot own references
-						WriteObjectProperty (Convert.ToString(enumerator.Entry.Key), "@" + referenceHandler.GetReferenceID (enumerator.Entry.Value), typeof(string));
+						WriteObjectProperty(Convert.ToString(enumerator.Entry.Key),
+							"@" + ReferenceHandler.GetReferenceID(enumerator.Entry.Value), typeof(string));
 					}
-
 				}
 			}
 			finally
 			{
-				depth--;
+				_depth--;
 			}
 
 			if (appendDelim)
 			{
 				WriteLine();
 			}
+
 			WriteOperatorObjectEnd();
 		}
 
@@ -1153,14 +1202,14 @@ namespace Pathfinding.Serialization.JsonFx
 			Write(value, true, fieldType);
 		}
 
-		protected virtual void WriteObject(object value, Type type, bool serializePrivate, Type fieldType = null )
+		protected virtual void WriteObject(object value, Type type, bool serializePrivate, Type fieldType = null)
 		{
 			bool appendDelim = false;
 
-			if (settings.HandleCyclicReferences && !TCU.GetTypeInfo(type).IsValueType)
+			if (_settings.HandleCyclicReferences && !TypeCoercionUtility.GetTypeInfo(type).IsValueType)
 			{
-				int prevIndex = 0;
-				if (previouslySerializedObjects.TryGetValue (value, out prevIndex)) {
+				if (_previouslySerializedObjects.TryGetValue(value, out int prevIndex))
+				{
 					WriteOperatorObjectStart();
 					WriteObjectProperty("@ref", prevIndex);
 					WriteLine();
@@ -1168,27 +1217,28 @@ namespace Pathfinding.Serialization.JsonFx
 					return;
 				}
 
-				previouslySerializedObjects.Add (value, previouslySerializedObjects.Count);
+				_previouslySerializedObjects.Add(value, _previouslySerializedObjects.Count);
 			}
 
 			WriteOperatorObjectStart();
 
-			depth++;
-			if (depth > settings.MaxDepth)
+			_depth++;
+			if (_depth > _settings.MaxDepth)
 			{
-				throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] {settings.MaxDepth}));
+				throw new JsonSerializationException(string.Format(ErrorMaxDepth, new object[] { _settings.MaxDepth }));
 			}
+
 			try
 			{
-
-				if (!string.IsNullOrEmpty(settings.TypeHintName) && (!settings.TypeHintsOnlyWhenNeeded || depth <= 1 || (fieldType != type && !Equals(fieldType, null)) ))
+				if (!string.IsNullOrEmpty(_settings.TypeHintName) &&
+				    (!_settings.TypeHintsOnlyWhenNeeded || _depth <= 1 || (fieldType != type && !Equals(fieldType, null))))
 				{
 					if (appendDelim)
 						WriteObjectPropertyDelim();
 					else
 						appendDelim = true;
 
-					WriteObjectProperty(settings.TypeHintName, type.FullName+", "+type.Assembly.GetName().Name);
+					WriteObjectProperty(_settings.TypeHintName, type.FullName + ", " + type.Assembly.GetName().Name);
 				}
 
 
@@ -1196,18 +1246,18 @@ namespace Pathfinding.Serialization.JsonFx
 				// Note that this must be set after the type hint is serialized
 				// To make sure the fields are read correctly when deserializing
 
-				if (referenceHandler != null && referenceHandler.IsHandled (type)) {
-
+				if (ReferenceHandler != null && ReferenceHandler.IsHandled(type))
+				{
 					if (appendDelim)
 						WriteObjectPropertyDelim();
 					else
 						appendDelim = true;
 
-					WriteObjectProperty("@tag", referenceHandler.GetReferenceID (value));
+					WriteObjectProperty("@tag", ReferenceHandler.GetReferenceID(value));
 
 					// Notify the reference handler that this value has now been serialized
 					// Will throw an exception if it has already been serialized
-					referenceHandler.MarkAsSerialized (value);
+					ReferenceHandler.MarkAsSerialized(value);
 				}
 
 				//Console.WriteLine ("Anon " + anonymousType);
@@ -1216,22 +1266,23 @@ namespace Pathfinding.Serialization.JsonFx
 
 				// serialize public properties
 
-				KeyValuePair<string,FieldInfo>[] fields;
-				KeyValuePair<string,PropertyInfo>[] properties;
-				settings.Coercion.GetMemberWritingMap (type, settings, out fields, out properties);
+				KeyValuePair<string, FieldInfo>[] fields;
+				KeyValuePair<string, PropertyInfo>[] properties;
+				_settings.Coercion.GetMemberWritingMap(type, _settings, out fields, out properties);
 
-				for (int j = 0; j < properties.Length; j++ )
+				for (int j = 0; j < properties.Length; j++)
 				{
-					PropertyInfo property  = properties[j].Value;
+					PropertyInfo property = properties[j].Value;
 
 					object propertyValue = property.GetValue(value, null);
-					if (IsDefaultValue(property, propertyValue)) {
+					if (IsDefaultValue(property, propertyValue))
+					{
 						if (Settings.DebugMode)
-							Console.WriteLine ("Cannot serialize "+property.Name+" : is default value");
+							Console.WriteLine("Cannot serialize " + property.Name + " : is default value");
 						continue;
 					}
-					
-					
+
+
 					if (appendDelim)
 						WriteObjectPropertyDelim();
 					else
@@ -1239,27 +1290,34 @@ namespace Pathfinding.Serialization.JsonFx
 
 					string name = properties[j].Key;
 
-					bool ownedRef = referenceHandler == null || !referenceHandler.IsHandled (property.PropertyType) || referenceHandler.IsOwnedRef (property);
+					bool ownedRef = ReferenceHandler == null ||
+					                !ReferenceHandler.IsHandled(property.PropertyType) ||
+					                ReferenceHandler.IsOwnedRef(property);
 
-					if (ownedRef || propertyValue == null) {
+					if (ownedRef || propertyValue == null)
+					{
 						// Reference is owned by this property, serialize it as normal
 						WriteObjectProperty(name, propertyValue, property.PropertyType);
-					} else {
+					}
+					else
+					{
 						// Reference is not owned by this property, write a reference to it
-						WriteObjectProperty (name, "@" + referenceHandler.GetReferenceID (propertyValue), typeof(string));
+						WriteObjectProperty(name, "@" + ReferenceHandler.GetReferenceID(propertyValue), typeof(string));
 					}
 				}
-					
-				for (int j = 0; j < fields.Length; j++ ) {
+
+				for (int j = 0; j < fields.Length; j++)
+				{
 					FieldInfo field = fields[j].Value;
-					
+
 					object fieldValue = field.GetValue(value);
-					if (IsDefaultValue(field, fieldValue)) {
+					if (IsDefaultValue(field, fieldValue))
+					{
 						if (Settings.DebugMode)
-							Console.WriteLine ("Cannot serialize "+field.Name+" : is default value");
+							Console.WriteLine("Cannot serialize " + field.Name + " : is default value");
 						continue;
 					}
-				
+
 					if (appendDelim)
 						WriteObjectPropertyDelim();
 					else
@@ -1267,90 +1325,95 @@ namespace Pathfinding.Serialization.JsonFx
 
 					string name = fields[j].Key;
 
-					bool ownedRef = referenceHandler == null || !referenceHandler.IsHandled (field.FieldType) || referenceHandler.IsOwnedRef (field);
+					bool ownedRef = ReferenceHandler == null ||
+					                !ReferenceHandler.IsHandled(field.FieldType) ||
+					                ReferenceHandler.IsOwnedRef(field);
 
-					if (ownedRef || fieldValue == null) {
+					if (ownedRef || fieldValue == null)
+					{
 						// Reference is owned by this field, serialize it as normal
 						WriteObjectProperty(name, fieldValue, field.FieldType);
-					} else {
+					}
+					else
+					{
 						// Reference is not owned by this field, write a reference to it
-						WriteObjectProperty (name, "@" + referenceHandler.GetReferenceID (fieldValue), typeof(string));
+						WriteObjectProperty(name, "@" + ReferenceHandler.GetReferenceID(fieldValue), typeof(string));
 					}
 				}
 			}
 			finally
 			{
-				depth--;
+				_depth--;
 			}
 
 			if (appendDelim)
 				WriteLine();
-			
+
 			WriteOperatorObjectEnd();
 		}
 
 		protected virtual void WriteLiteralNull()
 		{
-			Writer.Write(JsonReader.LiteralNull);
+			_writer.Write(JsonReader.LiteralNull);
 		}
 
 		protected virtual void WriteOperatorArrayStart()
 		{
-			Writer.Write(JsonReader.OperatorArrayStart);
+			_writer.Write(JsonReader.OperatorArrayStart);
 		}
 
 		protected virtual void WriteOperatorArrayEnd()
 		{
-			Writer.Write(JsonReader.OperatorArrayEnd);
+			_writer.Write(JsonReader.OperatorArrayEnd);
 		}
 
 		protected virtual void WriteOperatorObjectStart()
 		{
-			Writer.Write(JsonReader.OperatorObjectStart);
+			_writer.Write(JsonReader.OperatorObjectStart);
 		}
 
 		protected virtual void WriteOperatorObjectEnd()
 		{
-			Writer.Write(JsonReader.OperatorObjectEnd);
+			_writer.Write(JsonReader.OperatorObjectEnd);
 		}
 
 		protected virtual void WriteOperatorNameDelim()
 		{
-			Writer.Write(JsonReader.OperatorNameDelim);
+			_writer.Write(JsonReader.OperatorNameDelim);
 		}
 
 		protected virtual void WriteArrayItemDelim()
 		{
-			Writer.Write(JsonReader.OperatorValueDelim);
+			_writer.Write(JsonReader.OperatorValueDelim);
 		}
 
 		protected virtual void WriteObjectPropertyDelim()
 		{
-			Writer.Write(JsonReader.OperatorValueDelim);
+			_writer.Write(JsonReader.OperatorValueDelim);
 		}
 
 		protected virtual void WriteLine()
 		{
-			if (!settings.PrettyPrint)
+			if (!_settings.PrettyPrint)
 			{
 				return;
 			}
 
-			Writer.WriteLine();
-			for (int i=0; i<depth; i++)
+			_writer.WriteLine();
+			for (int i = 0; i < _depth; i++)
 			{
-				Writer.Write(settings.Tab);
+				_writer.Write(_settings.Tab);
 			}
 		}
 
 		protected virtual void WriteSpace()
 		{
-			if (!settings.PrettyPrint)
+			if (!_settings.PrettyPrint)
 			{
 				return;
 			}
 
-			Writer.Write(' ');
+			_writer.Write(' ');
 		}
 
 		#endregion Writer Methods
@@ -1414,9 +1477,9 @@ namespace Pathfinding.Serialization.JsonFx
 				return enums.ToArray();
 			}
 
-			for (int i = enumValues.Length-1; i >= 0; i--)
+			for (int i = enumValues.Length - 1; i >= 0; i--)
 			{
-				ulong enumValue = Convert.ToUInt64(enumValues.GetValue(new[]{i}));
+				ulong enumValue = Convert.ToUInt64(enumValues.GetValue(new[] { i }));
 
 				if ((i == 0) && (enumValue == 0L))
 				{
@@ -1430,7 +1493,7 @@ namespace Pathfinding.Serialization.JsonFx
 					longVal -= enumValue;
 
 					// add enum to list
-					enums.Add(enumValues.GetValue(new[] {i}) as Enum);
+					enums.Add(enumValues.GetValue(new[] { i }) as Enum);
 				}
 			}
 
@@ -1467,9 +1530,9 @@ namespace Pathfinding.Serialization.JsonFx
 
 		void IDisposable.Dispose()
 		{
-			if (Writer != null)
+			if (_writer != null)
 			{
-				Writer.Dispose();
+				_writer.Dispose();
 			}
 		}
 

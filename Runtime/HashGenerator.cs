@@ -1,4 +1,5 @@
 ﻿#region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,17 +27,21 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
+
 #endregion License
 
 using System;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
-	/// Goes through the exact same data that gets serialized by a <see cref="JsonWriter"/>, but doesn't write it to a stream.
-	/// Instead it only puts that data through a <see cref="System.Security.Cryptography.HashAlgorithm"/>
+	/// Goes through the exact same data that gets serialized by
+	/// a <see cref="JsonWriter"/>, but doesn't write it to a stream.
+	/// Instead it only puts that data through a
+	/// <see cref="System.Security.Cryptography.HashAlgorithm"/>
 	/// to output a hash code at the end.
 	/// </summary>
 	/// <seealso cref="JsonWriterWithHasher"/>
@@ -45,7 +50,7 @@ namespace Pathfinding.Serialization.JsonFx
 		#region Fields
 
 		// from https://stackoverflow.com/a/3621316
-		protected readonly System.Security.Cryptography.HashAlgorithm Hasher;
+		protected readonly HashAlgorithm Hasher;
 		protected readonly byte[] HasherByteBuffer = new byte[16];
 
 		#endregion Fields
@@ -54,7 +59,7 @@ namespace Pathfinding.Serialization.JsonFx
 
 		public HashGenerator(JsonWriterSettings settings, string hashAlgorithm) : base(settings)
 		{
-			Hasher = System.Security.Cryptography.HashAlgorithm.Create(hashAlgorithm);
+			Hasher = HashAlgorithm.Create(hashAlgorithm);
 			Hasher?.Initialize();
 		}
 
@@ -98,7 +103,7 @@ namespace Pathfinding.Serialization.JsonFx
 
 		public override void Write(sbyte value)
 		{
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
@@ -146,7 +151,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
@@ -159,7 +164,7 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
@@ -172,19 +177,19 @@ namespace Pathfinding.Serialization.JsonFx
 				return;
 			}
 
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
 		public override void Write(float value)
 		{
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 
 		public override void Write(double value)
 		{
-			byte[] bytes = System.BitConverter.GetBytes(value);
+			byte[] bytes = BitConverter.GetBytes(value);
 			Hasher.TransformBlock(bytes, 0, bytes.Length, null, 0);
 		}
 

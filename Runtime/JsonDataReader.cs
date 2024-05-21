@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,19 +27,18 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
-using System.IO;
-using System.Text;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.IO;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// An <see cref="IDataReader"/> adapter for <see cref="JsonDataReader"/>
@@ -54,7 +54,7 @@ namespace Pathfinding.Serialization.JsonFx
 
 		#region Fields
 
-		private readonly JsonReaderSettings Settings;
+		readonly JsonReaderSettings _settings;
 
 		#endregion Fields
 
@@ -70,7 +70,8 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				throw new ArgumentNullException("settings");
 			}
-			this.Settings = settings;
+
+			_settings = settings;
 		}
 
 		#endregion Init
@@ -80,19 +81,16 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <summary>
 		/// Gets the content type
 		/// </summary>
-		public string ContentType
-		{
-			get { return JsonDataReader.JsonMimeType; }
-		}
+		public string ContentType => JsonMimeType;
 
 		/// <summary>
-		/// Deserializes a data object of Type <param name="type">type</param> from the <param name="input">input</param>
+		/// Deserializes a data object of given type from the input
 		/// </summary>
-		/// <param name="output"></param>
-		/// <param name="data"></param>
-		public object Deserialize(TextReader input, Type type)
+		/// <param name="input"></param>
+		/// <param name="type"></param>
+		public object Deserialize(TextReader input, TP type)
 		{
-			return new JsonReader(input, this.Settings).Deserialize(type);
+			return new JsonReader(input, _settings).Deserialize(type);
 		}
 
 		#endregion IDataReader Members

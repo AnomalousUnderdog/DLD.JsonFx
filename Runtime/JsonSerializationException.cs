@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,27 +27,33 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	public class JsonSerializationException : InvalidOperationException
 	{
 		#region Init
 
-		public JsonSerializationException() : base() { }
+		public JsonSerializationException()
+		{
+		}
 
-		public JsonSerializationException(string message) : base(message) { }
+		public JsonSerializationException(string message) : base(message)
+		{
+		}
 
-		public JsonSerializationException(string message, Exception innerException) : base(message, innerException) { }
+		public JsonSerializationException(string message, Exception innerException) : base(message, innerException)
+		{
+		}
 
 		#endregion Init
 	}
@@ -55,7 +62,7 @@ namespace Pathfinding.Serialization.JsonFx
 	{
 		#region Fields
 
-		private int index = -1;
+		int _index = -1;
 
 		#endregion Fields
 
@@ -63,13 +70,13 @@ namespace Pathfinding.Serialization.JsonFx
 
 		public JsonDeserializationException(string message, int index) : base(message)
 		{
-			this.index = index;
+			_index = index;
 		}
 
 		public JsonDeserializationException(string message, Exception innerException, int index)
 			: base(message, innerException)
 		{
-			this.index = index;
+			_index = index;
 		}
 
 		#endregion Init
@@ -79,10 +86,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <summary>
 		/// Gets the character position in the stream where the error occurred.
 		/// </summary>
-		public int Index
-		{
-			get { return this.index; }
-		}
+		public int Index => _index;
 
 		#endregion Properties
 
@@ -105,14 +109,15 @@ namespace Pathfinding.Serialization.JsonFx
 			line = 1;
 
 			bool foundLF = false;
-			int i = Math.Min(this.index, source.Length);
-			for (; i>0; i--)
+			int i = Math.Min(_index, source.Length);
+			for (; i > 0; i--)
 			{
 				if (!foundLF)
 				{
 					col++;
 				}
-				if (source[i-1] == '\n')
+
+				if (source[i - 1] == '\n')
 				{
 					line++;
 					foundLF = true;
@@ -120,8 +125,9 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 		}
 
-		public override string ToString () {
-			return "JsonDeserializationException: Index=" + Index +"\n"+base.ToString();
+		public override string ToString()
+		{
+			return "JsonDeserializationException: Index=" + Index + "\n" + base.ToString();
 		}
 
 		#endregion Methods
@@ -131,11 +137,17 @@ namespace Pathfinding.Serialization.JsonFx
 	{
 		#region Init
 
-		public JsonTypeCoercionException() : base() { }
+		public JsonTypeCoercionException()
+		{
+		}
 
-		public JsonTypeCoercionException(string message) : base(message) { }
+		public JsonTypeCoercionException(string message) : base(message)
+		{
+		}
 
-		public JsonTypeCoercionException(string message, Exception innerException) : base(message, innerException) { }
+		public JsonTypeCoercionException(string message, Exception innerException) : base(message, innerException)
+		{
+		}
 
 		#endregion Init
 	}

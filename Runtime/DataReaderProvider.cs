@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,20 +27,19 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
-using System.Collections.Generic;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.Collections.Generic;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
-
 	public interface IDataReaderProvider
 	{
 		IDataReader Find(string contentTypeHeader);
@@ -52,7 +52,8 @@ namespace Pathfinding.Serialization.JsonFx
 	{
 		#region Fields
 
-		private readonly IDictionary<string, IDataReader> ReadersByMime = new Dictionary<string, IDataReader>(StringComparer.OrdinalIgnoreCase);
+		readonly IDictionary<string, IDataReader> _readersByMime =
+			new Dictionary<string, IDataReader>(StringComparer.OrdinalIgnoreCase);
 
 		#endregion Fields
 
@@ -68,9 +69,9 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				foreach (IDataReader reader in readers)
 				{
-					if (!String.IsNullOrEmpty(reader.ContentType))
+					if (!string.IsNullOrEmpty(reader.ContentType))
 					{
-						this.ReadersByMime[reader.ContentType] = reader;
+						_readersByMime[reader.ContentType] = reader;
 					}
 				}
 			}
@@ -89,9 +90,9 @@ namespace Pathfinding.Serialization.JsonFx
 		{
 			string type = DataWriterProvider.ParseMediaType(contentTypeHeader);
 
-			if (this.ReadersByMime.ContainsKey(type))
+			if (_readersByMime.ContainsKey(type))
 			{
-				return ReadersByMime[type];
+				return _readersByMime[type];
 			}
 
 			return null;

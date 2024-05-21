@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,8 +27,14 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
+
 #endregion License
 
+#if WINDOWS_STORE
+using TP = System.Reflection.TypeInfo;
+#else
+using TP = System.Type;
+#endif
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -36,22 +43,13 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 using UnityEngine;
-using Object = System.Object;
-#if WINDOWS_STORE
-using TP = System.Reflection.TypeInfo;
-#else
-using TP = System.Type;
-#endif
 
-using TCU = Pathfinding.Serialization.JsonFx.TypeCoercionUtility;
-
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	public interface ISerializationRule
 	{
 		FieldSerializationRuleType ShouldFieldBeSerialized { get; }
 	}
-
 
 
 	/// <summary>
@@ -61,9 +59,9 @@ namespace Pathfinding.Serialization.JsonFx
 	{
 		#region Constants
 
-		private const string ErrorNullValueType = "{0} does not accept null as a value";
-		private const string ErrorDefaultCtor = "Only objects with default constructors can be deserialized. ({0})";
-		private const string ErrorCannotInstantiate = "Interfaces, Abstract classes, and unsupported ValueTypes cannot be deserialized. ({0})";
+		const string ErrorNullValueType = "{0} does not accept null as a value";
+		const string ErrorDefaultCtor = "Only objects with default constructors can be deserialized. ({0})";
+		const string ErrorCannotInstantiate = "Interfaces, Abstract classes, and unsupported ValueTypes cannot be deserialized. ({0})";
 
 		const string BUILT_IN_ASSEMBLY = "Assembly-CSharp";
 		const string BUILT_IN_ASSEMBLY_FIRST_PASS = "Assembly-CSharp-firstpass";
@@ -85,10 +83,10 @@ namespace Pathfinding.Serialization.JsonFx
 
 		#region Fields
 
-		private Dictionary<Type, Dictionary<string, MemberInfo>> memberMapCache;
-		private bool allowNullValueTypes = true;
+		Dictionary<TP, Dictionary<string, MemberInfo>> _memberMapCache;
+		bool _allowNullValueTypes = true;
 
-		readonly ConcurrentDictionary<string, Type> _hintedTypeCache = new ConcurrentDictionary<string, Type>();
+		readonly ConcurrentDictionary<string, TP> _hintedTypeCache = new ConcurrentDictionary<string, TP>();
 
 		FieldSerializationRuleType _shouldFieldBeSerialized;
 
@@ -97,13 +95,14 @@ namespace Pathfinding.Serialization.JsonFx
 			_shouldFieldBeSerialized = newVal;
 		}
 
-		FieldSerializationRuleType ShouldFieldBeSerialized { get { return _shouldFieldBeSerialized; } }
+		FieldSerializationRuleType ShouldFieldBeSerialized => _shouldFieldBeSerialized;
 
 		#endregion Fields
 
 		#region Properties
 
-		public static TP GetTypeInfo ( System.Type tp ) {
+		public static TP GetTypeInfo(TP tp)
+		{
 #if WINDOWS_STORE
 			return tp.GetTypeInfo ();
 #else
@@ -111,16 +110,17 @@ namespace Pathfinding.Serialization.JsonFx
 #endif
 		}
 
-		private Dictionary<Type, Dictionary<string, MemberInfo>> MemberMapCache
+		Dictionary<TP, Dictionary<string, MemberInfo>> MemberMapCache
 		{
 			get
 			{
-				if (this.memberMapCache == null)
+				if (_memberMapCache == null)
 				{
 					// instantiate space for cache
-					this.memberMapCache = new Dictionary<Type, Dictionary<string, MemberInfo>>();
+					_memberMapCache = new Dictionary<Type, Dictionary<string, MemberInfo>>();
 				}
-				return this.memberMapCache;
+
+				return _memberMapCache;
 			}
 		}
 
@@ -135,14 +135,13 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </remarks>
 		public bool AllowNullValueTypes
 		{
-			get { return this.allowNullValueTypes; }
-			set { this.allowNullValueTypes = value; }
+			get => _allowNullValueTypes;
+			set => _allowNullValueTypes = value;
 		}
 
 		#endregion Properties
 
 		#region Object Methods
-
 
 		/// <summary>
 		/// If a Type Hint is present then this method attempts to
@@ -153,14 +152,13 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <param name="objectType">reference to the objectType</param>
 		/// <param name="memberMap">reference to the memberMap</param>
 		/// <returns></returns>
-		internal object ProcessTypeHint(
-			IDictionary result,
+		internal object ProcessTypeHint(IDictionary result,
 			string typeInfo,
-			ref Type objectType,
+			ref TP objectType,
 			ref Dictionary<string, MemberInfo> memberMap)
 		{
 			//Debug.Log(string.Format("ProcessTypeHint: typeInfo is {0}", typeInfo));
-			if (String.IsNullOrEmpty(typeInfo))
+			if (string.IsNullOrEmpty(typeInfo))
 			{
 				//Debug.Log("ProcessTypeHint: typeInfo is null");
 				objectType = null;
@@ -170,7 +168,7 @@ namespace Pathfinding.Serialization.JsonFx
 
 			Type hintedType = GetType(typeInfo);
 
-			if (Type.Equals (hintedType, null))
+			if (Equals(hintedType, null))
 			{
 				// The commented code below nullifies the constructed data so far
 				// if the type hint is invalid (referring to a non-existent type/namespace/assembly).
@@ -185,14 +183,15 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 
 			objectType = hintedType;
-			return this.CoerceType(hintedType, result, out memberMap);
+			return CoerceType(hintedType, result, out memberMap);
 		}
 
-		internal object ProcessTypeHint(object result, string typeInfo, ref Type objectType, ref Dictionary<string, MemberInfo> memberMap)
+		internal object ProcessTypeHint(object result, string typeInfo, ref TP objectType,
+			ref Dictionary<string, MemberInfo> memberMap)
 		{
 			Type hintedType = GetType(typeInfo);
 
-			if (Type.Equals(hintedType, null))
+			if (Equals(hintedType, null))
 			{
 				// The commented code below nullifies the constructed data so far
 				// if the type hint is invalid (referring to a non-existent type/namespace/assembly).
@@ -208,16 +207,17 @@ namespace Pathfinding.Serialization.JsonFx
 
 			objectType = hintedType;
 
-			if (result != null && Type.Equals (result.GetType (), hintedType)) {
+			if (result != null && result.GetType() == hintedType)
+			{
 				memberMap = GetMemberMap(objectType);
 				return result;
 			}
 
 			// result is null, need to instantiate instance for it first
-			return InstantiateObject (objectType, out memberMap);
+			return InstantiateObject(objectType, out memberMap);
 		}
 
-		Type GetType(string typeInfo)
+		TP GetType(string typeInfo)
 		{
 			if (string.IsNullOrWhiteSpace(typeInfo))
 			{
@@ -307,7 +307,7 @@ namespace Pathfinding.Serialization.JsonFx
 			return hintedType;
 		}
 
-		internal Object InstantiateObject(Type objectType)
+		internal object InstantiateObject(TP objectType)
 		{
 			/*if (TCU.GetTypeInfo(objectType).IsInterface || TCU.GetTypeInfo(objectType).IsAbstract || TCU.GetTypeInfo(objectType).IsValueType)
 			{
@@ -334,33 +334,40 @@ namespace Pathfinding.Serialization.JsonFx
 				}
 				throw new JsonTypeCoercionException("Error instantiating " + objectType.FullName, ex);
 			}*/
-			return System.Activator.CreateInstance (objectType);
+			return Activator.CreateInstance(objectType);
 			//return result;
 		}
 
-		internal Object InstantiateObject(Type objectType, out Dictionary<string, MemberInfo> memberMap)
+		internal object InstantiateObject(TP objectType, out Dictionary<string, MemberInfo> memberMap)
 		{
-			Object o = InstantiateObject(objectType);
+			object o = InstantiateObject(objectType);
 			memberMap = GetMemberMap(objectType);
 
 			return o;
 		}
 
-		/**
-		 * Dictionary from types to a list of (string,FieldInfo) pairs and a list of (string,PropertyInfo) pairs
-		 */
-		Dictionary<Type,KeyValuePair< KeyValuePair<string,FieldInfo>[] , KeyValuePair<string,PropertyInfo>[] >> writingMaps;
-		List<KeyValuePair<string,FieldInfo>> fieldList;
-		List<KeyValuePair<string,PropertyInfo>> propList;
+		/// <summary>
+		/// Dictionary from types to a list of (string,FieldInfo) pairs and a list of (string,PropertyInfo) pairs
+		/// </summary>
+		Dictionary<TP, KeyValuePair<KeyValuePair<string, FieldInfo>[], KeyValuePair<string, PropertyInfo>[]>>
+			_writingMaps;
 
-		public void GetMemberWritingMap (Type objectType, JsonWriterSettings settings, out KeyValuePair<string,FieldInfo>[] outFields, out KeyValuePair<string,PropertyInfo>[] outProps) {
+		List<KeyValuePair<string, FieldInfo>> _fieldList;
+		List<KeyValuePair<string, PropertyInfo>> _propList;
 
-			if ( writingMaps == null ) {
-				writingMaps = new Dictionary<Type,KeyValuePair< KeyValuePair<string,FieldInfo>[] , KeyValuePair<string,PropertyInfo>[] >> ();
+		public void GetMemberWritingMap(TP objectType, JsonWriterSettings settings,
+			out KeyValuePair<string, FieldInfo>[] outFields, out KeyValuePair<string, PropertyInfo>[] outProps)
+		{
+			if (_writingMaps == null)
+			{
+				_writingMaps =
+					new Dictionary<Type,
+						KeyValuePair<KeyValuePair<string, FieldInfo>[], KeyValuePair<string, PropertyInfo>[]>>();
 			}
 
-			KeyValuePair< KeyValuePair<string,FieldInfo>[] , KeyValuePair<string,PropertyInfo>[]> pair;
-			if (writingMaps.TryGetValue (objectType, out pair)) {
+			KeyValuePair<KeyValuePair<string, FieldInfo>[], KeyValuePair<string, PropertyInfo>[]> pair;
+			if (_writingMaps.TryGetValue(objectType, out pair))
+			{
 				outFields = pair.Key;
 				outProps = pair.Value;
 				return;
@@ -369,14 +376,14 @@ namespace Pathfinding.Serialization.JsonFx
 			bool anonymousType = objectType.IsGenericType && objectType.Name.StartsWith(JsonWriter.AnonymousTypePrefix);
 
 
-			if (fieldList == null)
-				fieldList = new List<KeyValuePair<string, FieldInfo>> ();
+			if (_fieldList == null)
+				_fieldList = new List<KeyValuePair<string, FieldInfo>>();
 
-			if (propList == null)
-				propList = new List<KeyValuePair<string, PropertyInfo>> ();
+			if (_propList == null)
+				_propList = new List<KeyValuePair<string, PropertyInfo>>();
 
-			fieldList.Clear ();
-			propList.Clear ();
+			_fieldList.Clear();
+			_propList.Clear();
 
 
 			List<Type> typeChain = new List<Type>();
@@ -389,10 +396,13 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 
 			// iterate through the inheritance chain in reverse so that we start at the base type
-			for (int tpIdx = typeChain.Count-1; tpIdx >= 0; --tpIdx)
+			for (int tpIdx = typeChain.Count - 1; tpIdx >= 0; --tpIdx)
 			{
-				FieldInfo[] fields = typeChain[tpIdx].GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-				for (int j = 0; j < fields.Length; j++ )
+				FieldInfo[] fields = typeChain[tpIdx].GetFields(BindingFlags.Instance |
+				                                                BindingFlags.Public |
+				                                                BindingFlags.NonPublic |
+				                                                BindingFlags.DeclaredOnly);
+				for (int j = 0; j < fields.Length; j++)
 				{
 					FieldInfo field = fields[j];
 
@@ -405,52 +415,61 @@ namespace Pathfinding.Serialization.JsonFx
 						}
 						//Debug.LogFormat("will serialize {0} because of rule", field.Name);
 					}
-					else if (field.IsStatic || (!field.IsPublic && field.GetCustomAttributes (typeof(JsonMemberAttribute), true).Length == 0))
+					else if (field.IsStatic ||
+					         (!field.IsPublic && field.GetCustomAttributes(typeof(JsonMemberAttribute), true).Length == 0))
 					{
 						//if (Settings.DebugMode)
-							//	Console.WriteLine ("Cannot serialize " + field.Name + " : not public or is static (and does not have a JsonMember attribute)");
+						//	Console.WriteLine ("Cannot serialize " + field.Name + " : not public or is static (and does not have a JsonMember attribute)");
 						continue;
 					}
 
-					if (settings.IsIgnored (objectType, field, null)) {
+					if (settings.IsIgnored(objectType, field, null))
+					{
 						//if (Settings.DebugMode)
 						//	Console.WriteLine ("Cannot serialize " + field.Name + " : ignored by settings");
 						continue;
 					}
 
 					// use Attributes here to control naming
-					string fieldName = JsonNameAttribute.GetJsonName (field);
-					if (String.IsNullOrEmpty (fieldName))
+					string fieldName = JsonNameAttribute.GetJsonName(field);
+					if (string.IsNullOrEmpty(fieldName))
 						fieldName = field.Name;
 
-					fieldList.Add (new KeyValuePair<string, FieldInfo> (fieldName, field));
+					_fieldList.Add(new KeyValuePair<string, FieldInfo>(fieldName, field));
 				}
 
-				PropertyInfo[] properties = typeChain[tpIdx].GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-				for (int j = 0; j < properties.Length; j++ )
+				PropertyInfo[] properties = typeChain[tpIdx].GetProperties(BindingFlags.Instance |
+				                                                           BindingFlags.Public |
+				                                                           BindingFlags.NonPublic |
+				                                                           BindingFlags.DeclaredOnly);
+				for (int j = 0; j < properties.Length; j++)
 				{
-					PropertyInfo property  = properties[j];
+					PropertyInfo property = properties[j];
 
 					//Console.WriteLine (property.Name);
-					if (!property.CanRead) {
+					if (!property.CanRead)
+					{
 						//if (Settings.DebugMode)
 						//	Console.WriteLine ("Cannot serialize "+property.Name+" : cannot read");
 						continue;
 					}
 
-					if (!property.CanWrite && !anonymousType) {
+					if (!property.CanWrite && !anonymousType)
+					{
 						//if (Settings.DebugMode)
 						//	Console.WriteLine ("Cannot serialize "+property.Name+" : cannot write");
 						continue;
 					}
 
-					if (settings.IsIgnored(objectType, property, null)) {
+					if (settings.IsIgnored(objectType, property, null))
+					{
 						//if (Settings.DebugMode)
 						//	Console.WriteLine ("Cannot serialize "+property.Name+" : is ignored by settings");
 						continue;
 					}
 
-					if (property.GetIndexParameters ().Length != 0) {
+					if (property.GetIndexParameters().Length != 0)
+					{
 						//if (Settings.DebugMode)
 						//	Console.WriteLine ("Cannot serialize "+property.Name+" : is indexed");
 						continue;
@@ -459,44 +478,49 @@ namespace Pathfinding.Serialization.JsonFx
 
 					// use Attributes here to control naming
 					string propertyName = JsonNameAttribute.GetJsonName(property);
-					if (String.IsNullOrEmpty(propertyName))
+					if (string.IsNullOrEmpty(propertyName))
 						propertyName = property.Name;
 
-					propList.Add ( new KeyValuePair<string, PropertyInfo>(propertyName, property));
+					_propList.Add(new KeyValuePair<string, PropertyInfo>(propertyName, property));
 				}
 			}
 
-			outFields = fieldList.ToArray();
-			outProps = propList.ToArray();
+			outFields = _fieldList.ToArray();
+			outProps = _propList.ToArray();
 
-			pair = new KeyValuePair< KeyValuePair<string,FieldInfo>[] , KeyValuePair<string,PropertyInfo>[]> ( outFields, outProps );
+			pair = new KeyValuePair<KeyValuePair<string, FieldInfo>[], KeyValuePair<string, PropertyInfo>[]>(outFields,
+				outProps);
 
-			writingMaps[objectType] = pair;
+			_writingMaps[objectType] = pair;
 		}
 
-		/** Returns a member map if suitable for the object type.
-		 * Dictionary types will make this method return null
-		 */
-		public Dictionary<string, MemberInfo> GetMemberMap(Type objectType)
+		/// <summary>
+		/// Returns a member map if suitable for the object type.
+		/// Dictionary types will make this method return null.
+		/// </summary>
+		/// <param name="objectType"></param>
+		/// <returns></returns>
+		public Dictionary<string, MemberInfo> GetMemberMap(TP objectType)
 		{
-			// don't incurr the cost of member map for dictionaries
-			if (TCU.GetTypeInfo(typeof(IDictionary)).IsAssignableFrom(TCU.GetTypeInfo(objectType)))
+			// don't incur the cost of member map for dictionaries
+			if (GetTypeInfo(typeof(IDictionary)).IsAssignableFrom(GetTypeInfo(objectType)))
 			{
 				return null;
 			}
-			else
-			{
-				return this.CreateMemberMap(objectType);
-			}
+
+			return CreateMemberMap(objectType);
 		}
 
-		/** Creates a member map for the type */
-		private Dictionary<string, MemberInfo> CreateMemberMap(Type objectType)
+		/// <summary>
+		/// Creates a member map for the type
+		/// </summary>
+		/// <param name="objectType"></param>
+		/// <returns></returns>
+		Dictionary<string, MemberInfo> CreateMemberMap(TP objectType)
 		{
-
 			Dictionary<string, MemberInfo> memberMap;
 
-			if (this.MemberMapCache.TryGetValue(objectType, out memberMap))
+			if (MemberMapCache.TryGetValue(objectType, out memberMap))
 			{
 				// map was stored in cache
 				return memberMap;
@@ -513,15 +537,18 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				//Debug.LogFormat("..going inside {0}", tp.Name);
 
-				PropertyInfo[] properties = TCU.GetTypeInfo(tp).GetProperties( BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance );
-				for  ( int i = 0 ; i < properties.Length; i++ )
+				PropertyInfo[] properties = GetTypeInfo(tp)
+					.GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+				for (int i = 0; i < properties.Length; i++)
 				{
-					PropertyInfo info = properties [i];
-					if (!info.CanRead || !info.CanWrite) {
+					PropertyInfo info = properties[i];
+					if (!info.CanRead || !info.CanWrite)
+					{
 						continue;
 					}
 
-					if (JsonIgnoreAttribute.IsJsonIgnore (info)) {
+					if (JsonIgnoreAttribute.IsJsonIgnore(info))
+					{
 						continue;
 					}
 
@@ -529,15 +556,21 @@ namespace Pathfinding.Serialization.JsonFx
 
 					//Debug.LogFormat("....will deserialize property {0} as {1}", info.Name, jsonName);
 
-					if (String.IsNullOrEmpty (jsonName)) {
+					if (string.IsNullOrEmpty(jsonName))
+					{
 						memberMap[info.Name] = info;
-					} else {
+					}
+					else
+					{
 						memberMap[jsonName] = info;
 					}
 				}
 
 				// load public fields into property map
-				FieldInfo[] fields = TCU.GetTypeInfo(tp).GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+				FieldInfo[] fields = GetTypeInfo(tp).GetFields(BindingFlags.NonPublic |
+				                                               BindingFlags.Public |
+				                                               BindingFlags.Instance |
+				                                               BindingFlags.DeclaredOnly);
 				foreach (FieldInfo info in fields)
 				{
 					//Debug.LogFormat("....found field {0}. <b>{1}</b>", info.Name, ShouldFieldBeSerialized == null ? "ShouldFieldBeSerialized is null!" : "ShouldFieldBeSerialized is being used!");
@@ -552,23 +585,28 @@ namespace Pathfinding.Serialization.JsonFx
 						//Debug.LogFormat("....will deserialize {0} because of rule", info.Name);
 					}
 					else if (!info.IsPublic &&
-	#if WINDOWS_STORE
+#if WINDOWS_STORE
 						info.GetCustomAttribute<JsonMemberAttribute>(false) == null
-	#else
-						info.GetCustomAttributes(typeof(JsonMemberAttribute), false).Length == 0
-	#endif
-					) {
+#else
+					         info.GetCustomAttributes(typeof(JsonMemberAttribute), false).Length == 0
+#endif
+					        )
+					{
 						continue;
 					}
 
-					if (JsonIgnoreAttribute.IsJsonIgnore (info)) {
+					if (JsonIgnoreAttribute.IsJsonIgnore(info))
+					{
 						continue;
 					}
 
-					string jsonName = JsonNameAttribute.GetJsonName (info);
-					if (String.IsNullOrEmpty (jsonName)) {
+					string jsonName = JsonNameAttribute.GetJsonName(info);
+					if (string.IsNullOrEmpty(jsonName))
+					{
 						memberMap[info.Name] = info;
-					} else {
+					}
+					else
+					{
 						memberMap[jsonName] = info;
 					}
 				}
@@ -577,19 +615,17 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 
 			// store in cache for repeated usage
-			this.MemberMapCache[objectType] = memberMap;
+			MemberMapCache[objectType] = memberMap;
 
 			return memberMap;
 		}
 
-		internal static Type GetMemberInfo(
-			Dictionary<string, MemberInfo> memberMap,
+		internal static TP GetMemberInfo(Dictionary<string, MemberInfo> memberMap,
 			string memberName,
 			out MemberInfo memberInfo)
 		{
-
 			if (memberMap != null &&
-				memberMap.TryGetValue(memberName, out memberInfo))
+			    memberMap.TryGetValue(memberName, out memberInfo))
 			{
 				// Check properties for object member
 				//memberInfo = memberMap[memberName];
@@ -599,7 +635,8 @@ namespace Pathfinding.Serialization.JsonFx
 					// maps to public property
 					return ((PropertyInfo)memberInfo).PropertyType;
 				}
-				else if (memberInfo is FieldInfo)
+
+				if (memberInfo is FieldInfo)
 				{
 					// maps to public field
 					return ((FieldInfo)memberInfo).FieldType;
@@ -617,22 +654,20 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <param name="memberType"></param>
 		/// <param name="memberInfo"></param>
 		/// <param name="value"></param>
-		internal void SetMemberValue(Object result, Type memberType, MemberInfo memberInfo, object value)
+		internal void SetMemberValue(object result, TP memberType, MemberInfo memberInfo, object value)
 		{
 			if (memberInfo is PropertyInfo)
 			{
 				// set value of public property
-				((PropertyInfo)memberInfo).SetValue(
-					result,
-					this.CoerceType(memberType, value),
+				((PropertyInfo)memberInfo).SetValue(result,
+					CoerceType(memberType, value),
 					null);
 			}
 			else if (memberInfo is FieldInfo)
 			{
 				// set value of public field
-				((FieldInfo)memberInfo).SetValue(
-					result,
-					this.CoerceType(memberType, value));
+				((FieldInfo)memberInfo).SetValue(result,
+					CoerceType(memberType, value));
 			}
 
 			// all other values are ignored
@@ -642,18 +677,20 @@ namespace Pathfinding.Serialization.JsonFx
 
 		#region Type Methods
 
-		internal object CoerceType(Type targetType, object value)
+		internal object CoerceType(TP targetType, object value)
 		{
-			bool isNullable = TypeCoercionUtility.IsNullable(targetType);
+			bool isNullable = IsNullable(targetType);
 			if (value == null)
 			{
-				if (!allowNullValueTypes &&
-					TCU.GetTypeInfo(targetType).IsValueType &&
-					!isNullable)
+				if (!_allowNullValueTypes &&
+				    GetTypeInfo(targetType).IsValueType &&
+				    !isNullable)
 				{
-					throw new JsonTypeCoercionException(String.Format(TypeCoercionUtility.ErrorNullValueType, new System.Object[] {targetType.FullName}));
+					throw new JsonTypeCoercionException(string.Format(ErrorNullValueType,
+						new object[] { targetType.FullName }));
 				}
-				return value;
+
+				return null;
 			}
 
 			if (isNullable)
@@ -667,19 +704,19 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 
 			Type actualType = value.GetType();
-			if (TCU.GetTypeInfo(targetType).IsAssignableFrom(TCU.GetTypeInfo(actualType)))
+			if (GetTypeInfo(targetType).IsAssignableFrom(GetTypeInfo(actualType)))
 			{
 				return value;
 			}
 
-			if (TCU.GetTypeInfo(targetType).IsEnum)
+			if (GetTypeInfo(targetType).IsEnum)
 			{
-				if (value is String)
+				if (value is string)
 				{
 					if (!Enum.IsDefined(targetType, value))
 					{
 						// if isn't a defined value perhaps it is the JsonName
-						foreach (FieldInfo field in TCU.GetTypeInfo(targetType).GetFields())
+						foreach (FieldInfo field in GetTypeInfo(targetType).GetFields())
 						{
 							string jsonName = JsonNameAttribute.GetJsonName(field);
 							if (((string)value).Equals(jsonName))
@@ -692,55 +729,66 @@ namespace Pathfinding.Serialization.JsonFx
 
 					return Enum.Parse(targetType, (string)value);
 				}
-				else
-				{
-					value = this.CoerceType(Enum.GetUnderlyingType(targetType), value);
-					return Enum.ToObject(targetType, value);
-				}
+
+				value = CoerceType(Enum.GetUnderlyingType(targetType), value);
+				return Enum.ToObject(targetType, value);
 			}
 
-			if (value is IDictionary)
+			if (value is IDictionary dictionary)
 			{
 				Dictionary<string, MemberInfo> memberMap;
-				return this.CoerceType(targetType, (IDictionary)value, out memberMap);
+				return CoerceType(targetType, dictionary, out memberMap);
 			}
 
-			if (TCU.GetTypeInfo(typeof(IEnumerable)).IsAssignableFrom(TCU.GetTypeInfo(targetType)) &&
-				TCU.GetTypeInfo(typeof(IEnumerable)).IsAssignableFrom(TCU.GetTypeInfo(actualType)))
+			if (GetTypeInfo(typeof(IEnumerable)).IsAssignableFrom(GetTypeInfo(targetType)) &&
+			    GetTypeInfo(typeof(IEnumerable)).IsAssignableFrom(GetTypeInfo(actualType)))
 			{
-				return this.CoerceList(targetType, actualType, (IEnumerable)value);
+				return CoerceList(targetType, actualType, (IEnumerable)value);
 			}
 
-			if (value is String)
+			if (value is string stringValue)
 			{
-				if (Type.Equals (targetType, typeof(DateTime))) {
-					DateTime date;
-					if (DateTime.TryParse(
-						(string)value,
-						DateTimeFormatInfo.InvariantInfo,
-						DateTimeStyles.RoundtripKind | DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.NoCurrentDateDefault,
-						    out date)) {
+				if (targetType == typeof(DateTime))
+				{
+					if (DateTime.TryParse(stringValue,
+						    DateTimeFormatInfo.InvariantInfo,
+						    DateTimeStyles.RoundtripKind |
+						    DateTimeStyles.AllowWhiteSpaces |
+						    DateTimeStyles.NoCurrentDateDefault,
+						    out DateTime date))
+					{
 						return date;
 					}
-				} else if (Type.Equals (targetType, typeof(Guid))) {
+				}
+				else if (targetType == typeof(Guid))
+				{
 					// try-catch is pointless since will throw upon generic conversion
-					return new Guid((string)value);
-				} else if (Type.Equals (targetType, typeof(Char))) {
-					if (((string)value).Length == 1) {
-						return ((string)value)[0];
+					return new Guid(stringValue);
+				}
+				else if (targetType == typeof(char))
+				{
+					if (stringValue.Length == 1)
+					{
+						return stringValue[0];
 					}
-				} else if (Equals (targetType, typeof(Uri))) {
+				}
+				else if (targetType == typeof(Uri))
+				{
 					Uri uri;
-					if (Uri.TryCreate ((string)value, UriKind.RelativeOrAbsolute, out uri)) {
+					if (Uri.TryCreate(stringValue, UriKind.RelativeOrAbsolute, out uri))
+					{
 						return uri;
 					}
-				} else if (Type.Equals (targetType, typeof(Version))) {
+				}
+				else if (targetType == typeof(Version))
+				{
 					// try-catch is pointless since will throw upon generic conversion
-					return new Version ((string)value);
+					return new Version(stringValue);
 				}
 			}
-			else if (Type.Equals (targetType, typeof(TimeSpan))) {
-				return new TimeSpan ((long)this.CoerceType (typeof(Int64), value));
+			else if (targetType == typeof(TimeSpan))
+			{
+				return new TimeSpan((long)CoerceType(typeof(long), value));
 			}
 
 #if !WINPHONE_8
@@ -765,31 +813,34 @@ namespace Pathfinding.Serialization.JsonFx
 			catch (Exception ex)
 			{
 				throw new JsonTypeCoercionException(
-					String.Format("Error converting {0} to {1}", new System.Object[] {value.GetType().FullName, targetType.FullName}), ex);
+					string.Format("Error converting {0} to {1}",
+						new object[] { value.GetType().FullName, targetType.FullName }), ex);
 			}
 		}
 
-		private object CoerceType(Type targetType, IDictionary value, out Dictionary<string, MemberInfo> memberMap)
+		object CoerceType(TP targetType, IDictionary value, out Dictionary<string, MemberInfo> memberMap)
 		{
-			object newValue = this.InstantiateObject(targetType, out memberMap);
-			if (memberMap != null)
+			object newValue = InstantiateObject(targetType, out memberMap);
+			if (memberMap == null)
 			{
-				// copy any values into new object
-				foreach (object key in value.Keys)
-				{
-					MemberInfo memberInfo;
-					Type memberType = TypeCoercionUtility.GetMemberInfo(memberMap, key as String, out memberInfo);
-					this.SetMemberValue(newValue, memberType, memberInfo, value[key]);
-				}
+				return newValue;
 			}
+
+			// copy any values into new object
+			foreach (object key in value.Keys)
+			{
+				Type memberType = GetMemberInfo(memberMap, key as string, out MemberInfo memberInfo);
+				SetMemberValue(newValue, memberType, memberInfo, value[key]);
+			}
+
 			return newValue;
 		}
 
-		private object CoerceList(Type targetType, Type arrayType, IEnumerable value)
+		object CoerceList(TP targetType, TP arrayType, IEnumerable value)
 		{
 			if (targetType.IsArray)
 			{
-				return this.CoerceArray(targetType.GetElementType(), value);
+				return CoerceArray(targetType.GetElementType(), value);
 			}
 
 			// targetType serializes as a JSON array but is not an array
@@ -812,27 +863,26 @@ namespace Pathfinding.Serialization.JsonFx
 				}
 
 				if (paramList.Length == 1 &&
-					TCU.GetTypeInfo(paramList[0].ParameterType).IsAssignableFrom(TCU.GetTypeInfo(arrayType)))
+				    GetTypeInfo(paramList[0].ParameterType).IsAssignableFrom(GetTypeInfo(arrayType)))
 				{
 					try
 					{
 						// invoke first constructor that can take this value as an argument
-						return ctor.Invoke(
-								new object[] { value }
-							);
+						return ctor.Invoke(new object[] { value });
 					}
 					catch
 					{
 						// there might exist a better match
-						continue;
 					}
 				}
 			}
 
-			if (ConstructorInfo.Equals (defaultCtor, null)) {
-				throw new JsonTypeCoercionException (
-					String.Format (TypeCoercionUtility.ErrorDefaultCtor, new System.Object[] { targetType.FullName }));
+			if (Equals(defaultCtor, null))
+			{
+				throw new JsonTypeCoercionException(
+					string.Format(ErrorDefaultCtor, new object[] { targetType.FullName }));
 			}
+
 			object collection;
 			try
 			{
@@ -845,31 +895,29 @@ namespace Pathfinding.Serialization.JsonFx
 				{
 					throw new JsonTypeCoercionException(ex.InnerException.Message, ex.InnerException);
 				}
+
 				throw new JsonTypeCoercionException("Error instantiating " + targetType.FullName, ex);
 			}
 
 			// many ICollection types have an AddRange method
 			// which adds all items at once
-			#if WINDOWS_STORE
-			/** \todo Not sure if this finds the correct methods */
-			MethodInfo method = TCU.GetTypeInfo(targetType).GetDeclaredMethod("AddRange");
-			#else
-			MethodInfo method = TCU.GetTypeInfo(targetType).GetMethod("AddRange");
-			#endif
+#if WINDOWS_STORE
+			// \todo Not sure if this finds the correct methods
+			MethodInfo method = GetTypeInfo(targetType).GetDeclaredMethod("AddRange");
+#else
+			MethodInfo method = GetTypeInfo(targetType).GetMethod("AddRange");
+#endif
 
-			ParameterInfo[] parameters = (MethodInfo.Equals (method, null)) ?
-					null : method.GetParameters();
-			Type paramType = (parameters == null || parameters.Length != 1) ?
-					null : parameters[0].ParameterType;
-			if (!Type.Equals (paramType, null) &&
-				TCU.GetTypeInfo(paramType).IsAssignableFrom (TCU.GetTypeInfo(arrayType)))
+			ParameterInfo[] parameters = method?.GetParameters();
+			Type paramType = (parameters == null || parameters.Length != 1) ? null : parameters[0].ParameterType;
+			if (!Equals(paramType, null) &&
+			    GetTypeInfo(paramType).IsAssignableFrom(GetTypeInfo(arrayType)))
 			{
 				try
 				{
 					// always try-catch Invoke() to expose real exception
 					// add all members in one method
-					method.Invoke(
-						collection,
+					method.Invoke(collection,
 						new object[] { value });
 				}
 				catch (TargetInvocationException ex)
@@ -878,43 +926,48 @@ namespace Pathfinding.Serialization.JsonFx
 					{
 						throw new JsonTypeCoercionException(ex.InnerException.Message, ex.InnerException);
 					}
+
 					throw new JsonTypeCoercionException("Error calling AddRange on " + targetType.FullName, ex);
 				}
+
 				return collection;
 			}
-			else
-			{
-				// many ICollection types have an Add method
-				// which adds items one at a time
+			// many ICollection types have an Add method
+			// which adds items one at a time
 #if WINDOWS_STORE
-				/** \todo Not sure if this finds the correct methods */
-				method = TCU.GetTypeInfo(targetType).GetDeclaredMethod("Add");
+			// \todo Not sure if this finds the correct methods
+			method = GetTypeInfo(targetType).GetDeclaredMethod("Add");
 #else
-				method = TCU.GetTypeInfo(targetType).GetMethod("Add");
+			method = GetTypeInfo(targetType).GetMethod("Add");
 #endif
-				parameters = (MethodInfo.Equals (method, null)) ?
-						null : method.GetParameters();
-				paramType = (parameters == null || parameters.Length != 1) ?
-						null : parameters[0].ParameterType;
-				if (!Type.Equals (paramType, null)) {
-					// loop through adding items to collection
-					foreach (object item in value) {
-						try {
-							// always try-catch Invoke() to expose real exception
-							method.Invoke (
-								collection,
-								new object[] {
-									this.CoerceType (paramType, item)
-								});
-						} catch (TargetInvocationException ex) {
-							if (ex.InnerException != null) {
-								throw new JsonTypeCoercionException(ex.InnerException.Message, ex.InnerException);
-							}
-							throw new JsonTypeCoercionException("Error calling Add on " + targetType.FullName, ex);
-						}
+			parameters = method?.GetParameters();
+			paramType = (parameters == null || parameters.Length != 1) ? null : parameters[0].ParameterType;
+			if (!Equals(paramType, null))
+			{
+				// loop through adding items to collection
+				foreach (object item in value)
+				{
+					try
+					{
+						// always try-catch Invoke() to expose real exception
+						method.Invoke(collection,
+							new[]
+							{
+								CoerceType(paramType, item)
+							});
 					}
-					return collection;
+					catch (TargetInvocationException ex)
+					{
+						if (ex.InnerException != null)
+						{
+							throw new JsonTypeCoercionException(ex.InnerException.Message, ex.InnerException);
+						}
+
+						throw new JsonTypeCoercionException("Error calling Add on " + targetType.FullName, ex);
+					}
 				}
+
+				return collection;
 			}
 
 			try
@@ -924,11 +977,13 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 			catch (Exception ex)
 			{
-				throw new JsonTypeCoercionException(String.Format("Error converting {0} to {1}", new System.Object[] {value.GetType().FullName, targetType.FullName}), ex);
+				throw new JsonTypeCoercionException(
+					string.Format("Error converting {0} to {1}",
+						new object[] { value.GetType().FullName, targetType.FullName }), ex);
 			}
 		}
 
-		private Array CoerceArray(Type elementType, IEnumerable value)
+		Array CoerceArray(Type elementType, IEnumerable value)
 		{
 			//ArrayList target = new ArrayList();
 
@@ -937,30 +992,32 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				count++;
 			}
-			Array arr = Array.CreateInstance (elementType, new int[] {count});
 
-			int i=0;
+			Array arr = Array.CreateInstance(elementType, new[] { count });
+
+			int i = 0;
 			foreach (object item in value)
 			{
-				//target.Add(this.CoerceType(elementType, item));
-				arr.SetValue ( this.CoerceType(elementType, item), new int[] {i} );
+				//target.Add(CoerceType(elementType, item));
+				arr.SetValue(CoerceType(elementType, item), new[] { i });
 				i++;
 			}
 
-			return arr;//target.ToArray(elementType);
+			return arr; //target.ToArray(elementType);
 		}
 
-		private static bool IsNullable(Type type)
+		static bool IsNullable(Type type)
 		{
-			return TCU.GetTypeInfo(type).IsGenericType && (typeof(Nullable<>).Equals (type.GetGenericTypeDefinition()));
+			return GetTypeInfo(type).IsGenericType && (typeof(Nullable<>).Equals(type.GetGenericTypeDefinition()));
 		}
 
 
-		public static bool HasJsonUseTypeHintAttribute ( TP tp ) {
+		public static bool HasJsonUseTypeHintAttribute(TP tp)
+		{
 #if WINDOWS_STORE
 			return tp.GetCustomAttribute<JsonUseTypeHintAttribute> (true) != null;
 #else
-			return tp.GetCustomAttributes(typeof(JsonUseTypeHintAttribute),true).Length != 0;
+			return tp.GetCustomAttributes(typeof(JsonUseTypeHintAttribute), true).Length != 0;
 #endif
 		}
 

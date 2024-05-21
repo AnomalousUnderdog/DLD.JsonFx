@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,28 +27,28 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
-using System.Reflection;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.Reflection;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// Specifies the name of the property which specifies if member should be serialized.
 	/// </summary>
-	[AttributeUsage(AttributeTargets.Property|AttributeTargets.Field, AllowMultiple=false)]
+	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 	public class JsonSpecifiedPropertyAttribute : Attribute
 	{
 		#region Fields
 
-		private string specifiedProperty = null;
+		string _specifiedProperty;
 
 		#endregion Fields
 
@@ -59,7 +60,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <param name="propertyName">the name of the property which controls serialization for this member</param>
 		public JsonSpecifiedPropertyAttribute(string propertyName)
 		{
-			this.specifiedProperty = propertyName;
+			_specifiedProperty = propertyName;
 		}
 
 		#endregion Init
@@ -72,8 +73,8 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </summary>
 		public string SpecifiedProperty
 		{
-			get { return this.specifiedProperty; }
-			set { this.specifiedProperty = value; }
+			get => _specifiedProperty;
+			set => _specifiedProperty = value;
 		}
 
 		#endregion Properties
@@ -87,7 +88,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <returns></returns>
 		public static string GetJsonSpecifiedProperty(MemberInfo memberInfo)
 		{
-			if (MemberInfo.Equals (memberInfo, null))
+			if (Equals(memberInfo, null))
 				//!memberInfo.IsDefined (typeof(JsonSpecifiedPropertyAttribute),true))
 				//!Attribute.IsDefined (memberInfo, typeof(JsonSpecifiedPropertyAttribute)))
 			{
@@ -97,7 +98,8 @@ namespace Pathfinding.Serialization.JsonFx
 #if WINDOWS_STORE
 			var attribute = memberInfo.GetCustomAttribute<JsonSpecifiedPropertyAttribute> (true);
 #else
-			var attribute = Attribute.GetCustomAttribute(memberInfo, typeof(JsonSpecifiedPropertyAttribute)) as JsonSpecifiedPropertyAttribute;
+			var attribute =
+				GetCustomAttribute(memberInfo, typeof(JsonSpecifiedPropertyAttribute)) as JsonSpecifiedPropertyAttribute;
 #endif
 			return attribute != null ? attribute.SpecifiedProperty : null;
 		}

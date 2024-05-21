@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,19 +27,19 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
-using System.Collections.Generic;
-using System.IO;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.Collections.Generic;
+using System.IO;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	public interface IDataWriterProvider
 	{
@@ -56,9 +57,13 @@ namespace Pathfinding.Serialization.JsonFx
 	{
 		#region Fields
 
-		private readonly IDataWriter DefaultWriter;
-		private readonly IDictionary<string, IDataWriter> WritersByExt = new Dictionary<string, IDataWriter>(StringComparer.OrdinalIgnoreCase);
-		private readonly IDictionary<string, IDataWriter> WritersByMime = new Dictionary<string, IDataWriter>(StringComparer.OrdinalIgnoreCase);
+		readonly IDataWriter _defaultWriter;
+
+		readonly IDictionary<string, IDataWriter> _writersByExt =
+			new Dictionary<string, IDataWriter>(StringComparer.OrdinalIgnoreCase);
+
+		readonly IDictionary<string, IDataWriter> _writersByMime =
+			new Dictionary<string, IDataWriter>(StringComparer.OrdinalIgnoreCase);
 
 		#endregion Fields
 
@@ -74,22 +79,22 @@ namespace Pathfinding.Serialization.JsonFx
 			{
 				foreach (IDataWriter writer in writers)
 				{
-					if (this.DefaultWriter == null)
+					if (_defaultWriter == null)
 					{
 						// TODO: decide less arbitrary way to choose default
 						// without hardcoding value into IDataWriter
-						this.DefaultWriter = writer;
+						_defaultWriter = writer;
 					}
 
-					if (!String.IsNullOrEmpty(writer.ContentType))
+					if (!string.IsNullOrEmpty(writer.ContentType))
 					{
-						this.WritersByMime[writer.ContentType] = writer;
+						_writersByMime[writer.ContentType] = writer;
 					}
 
-					if (!String.IsNullOrEmpty(writer.ContentType))
+					if (!string.IsNullOrEmpty(writer.ContentType))
 					{
-						string ext = DataWriterProvider.NormalizeExtension(writer.FileExtension);
-						this.WritersByExt[ext] = writer;
+						string ext = NormalizeExtension(writer.FileExtension);
+						_writersByExt[ext] = writer;
 					}
 				}
 			}
@@ -99,10 +104,7 @@ namespace Pathfinding.Serialization.JsonFx
 
 		#region Properties
 
-		public IDataWriter DefaultDataWriter
-		{
-			get { return this.DefaultWriter; }
-		}
+		public IDataWriter DefaultDataWriter => _defaultWriter;
 
 		#endregion Properties
 
@@ -110,11 +112,11 @@ namespace Pathfinding.Serialization.JsonFx
 
 		public IDataWriter Find(string extension)
 		{
-			extension = DataWriterProvider.NormalizeExtension(extension);
+			extension = NormalizeExtension(extension);
 
-			if (this.WritersByExt.ContainsKey(extension))
+			if (_writersByExt.ContainsKey(extension))
 			{
-				return WritersByExt[extension];
+				return _writersByExt[extension];
 			}
 
 			return null;
@@ -122,11 +124,11 @@ namespace Pathfinding.Serialization.JsonFx
 
 		public IDataWriter Find(string acceptHeader, string contentTypeHeader)
 		{
-			foreach (string type in DataWriterProvider.ParseHeaders(acceptHeader, contentTypeHeader))
+			foreach (string type in ParseHeaders(acceptHeader, contentTypeHeader))
 			{
-				if (this.WritersByMime.ContainsKey(type))
+				if (_writersByMime.ContainsKey(type))
 				{
-					return WritersByMime[type];
+					return _writersByMime[type];
 				}
 			}
 
@@ -151,49 +153,49 @@ namespace Pathfinding.Serialization.JsonFx
 			string mime;
 
 			// check for a matching accept type
-			foreach (string type in DataWriterProvider.SplitTrim(accept, ','))
+			foreach (string type in SplitTrim(accept, ','))
 			{
-				mime = DataWriterProvider.ParseMediaType(type);
-				if (!String.IsNullOrEmpty(mime))
+				mime = ParseMediaType(type);
+				if (!string.IsNullOrEmpty(mime))
 				{
 					yield return mime;
 				}
 			}
 
 			// fallback on content-type
-			mime = DataWriterProvider.ParseMediaType(contentType);
-			if (!String.IsNullOrEmpty(mime))
+			mime = ParseMediaType(contentType);
+			if (!string.IsNullOrEmpty(mime))
 			{
 				yield return mime;
 			}
 		}
 
 		/// <summary>
-		/// 
+		///
 		/// </summary>
 		/// <param name="type"></param>
 		/// <returns></returns>
 		public static string ParseMediaType(string type)
 		{
-			foreach (string mime in DataWriterProvider.SplitTrim(type, ';'))
+			foreach (string mime in SplitTrim(type, ';'))
 			{
 				// only return first part
 				return mime;
 			}
 
 			// if no parts then was empty
-			return String.Empty;
+			return string.Empty;
 		}
 
-		private static IEnumerable<string> SplitTrim(string source, char ch)
+		static IEnumerable<string> SplitTrim(string source, char ch)
 		{
-			if (String.IsNullOrEmpty(source))
+			if (string.IsNullOrEmpty(source))
 			{
 				yield break;
 			}
 
 			int length = source.Length;
-			for (int prev=0, next=0; prev<length && next>=0; prev=next+1)
+			for (int prev = 0, next = 0; prev < length && next >= 0; prev = next + 1)
 			{
 				next = source.IndexOf(ch, prev);
 				if (next < 0)
@@ -201,7 +203,7 @@ namespace Pathfinding.Serialization.JsonFx
 					next = length;
 				}
 
-				string part = source.Substring(prev, next-prev).Trim();
+				string part = source.Substring(prev, next - prev).Trim();
 				if (part.Length > 0)
 				{
 					yield return part;
@@ -209,11 +211,11 @@ namespace Pathfinding.Serialization.JsonFx
 			}
 		}
 
-		private static string NormalizeExtension(string extension)
+		static string NormalizeExtension(string extension)
 		{
-			if (String.IsNullOrEmpty(extension))
+			if (string.IsNullOrEmpty(extension))
 			{
-				return String.Empty;
+				return string.Empty;
 			}
 
 			// ensure is only extension with leading dot

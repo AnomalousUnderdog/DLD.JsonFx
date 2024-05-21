@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,22 +27,22 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Text.RegularExpressions;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 
 #if !NO_ECMASCRIPT
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// Writes data as full ECMAScript objects, rather than the limited set of JSON objects.
@@ -50,31 +51,33 @@ namespace Pathfinding.Serialization.JsonFx
 	{
 		#region Constants
 
-		private static readonly DateTime EcmaScriptEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-		private const string EcmaScriptDateCtor1 = "new Date({0})";
-		private const string EcmaScriptDateCtor7 = "new Date({0:0000},{1},{2},{3},{4},{5},{6})";
-		private const string EmptyRegExpLiteral = "(?:)";
-		private const char RegExpLiteralDelim = '/';
-		private const char OperatorCharEscape = '\\';
+		static readonly DateTime EcmaScriptEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+		const string EcmaScriptDateCtor1 = "new Date({0})";
+		const string EcmaScriptDateCtor7 = "new Date({0:0000},{1},{2},{3},{4},{5},{6})";
+		const string EmptyRegExpLiteral = "(?:)";
+		const char RegExpLiteralDelim = '/';
+		const char OperatorCharEscape = '\\';
 
-		private const string NamespaceDelim = ".";
-		private static readonly char[] NamespaceDelims = { '.' };
+		const string NamespaceDelim = ".";
+		static readonly char[] NamespaceDelims = { '.' };
 
-		private const string RootDeclarationDebug =
-@"
+		const string RootDeclarationDebug =
+			@"
 /* namespace {1} */
 var {0};";
 
-		private const string RootDeclaration = @"var {0};";
+		const string RootDeclaration = @"var {0};";
 
-		private const string NamespaceCheck =
-@"if(""undefined""===typeof {0}){{{0}={{}};}}";
-		private const string NamespaceCheckDebug =
-@"
+		const string NamespaceCheck =
+			@"if(""undefined""===typeof {0}){{{0}={{}};}}";
+
+		const string NamespaceCheckDebug =
+			@"
 if (""undefined"" === typeof {0}) {{
 	{0} = {{}};
 }}";
-		private static readonly IList<string> BrowserObjects = new List<string>(new string[]
+
+		static readonly IList<string> BrowserObjects = new List<string>(new[]
 		{
 			"console",
 			"document",
@@ -157,9 +160,10 @@ if (""undefined"" === typeof {0}) {{
 		/// <param name="namespaces">list of namespaces already emitted</param>
 		/// <param name="debug">determines if should emit pretty-printed</param>
 		/// <returns>if was a nested identifier</returns>
-		public static bool WriteNamespaceDeclaration(TextWriter writer, string ident, List<string> namespaces, bool isDebug)
+		public static bool WriteNamespaceDeclaration(TextWriter writer, string ident, List<string> namespaces,
+			bool isDebug)
 		{
-			if (String.IsNullOrEmpty(ident))
+			if (string.IsNullOrEmpty(ident))
 			{
 				return false;
 			}
@@ -169,22 +173,22 @@ if (""undefined"" === typeof {0}) {{
 				namespaces = new List<string>();
 			}
 
-			string[] nsParts = ident.Split(EcmaScriptWriter.NamespaceDelims, StringSplitOptions.RemoveEmptyEntries);
+			string[] nsParts = ident.Split(NamespaceDelims, StringSplitOptions.RemoveEmptyEntries);
 			string ns = nsParts[0];
 
 			bool isNested = false;
-			for (int i=0; i<nsParts.Length-1; i++)
+			for (int i = 0; i < nsParts.Length - 1; i++)
 			{
 				isNested = true;
 
 				if (i > 0)
 				{
-					ns += EcmaScriptWriter.NamespaceDelim;
+					ns += NamespaceDelim;
 					ns += nsParts[i];
 				}
 
 				if (namespaces.Contains(ns) ||
-					EcmaScriptWriter.BrowserObjects.Contains(ns))
+				    BrowserObjects.Contains(ns))
 				{
 					// don't emit multiple checks for same namespace
 					continue;
@@ -197,22 +201,22 @@ if (""undefined"" === typeof {0}) {{
 				{
 					if (isDebug)
 					{
-						writer.Write(EcmaScriptWriter.RootDeclarationDebug, ns,
-							String.Join(NamespaceDelim, nsParts, 0, nsParts.Length-1));
+						writer.Write(RootDeclarationDebug, ns,
+							string.Join(NamespaceDelim, nsParts, 0, nsParts.Length - 1));
 					}
 					else
 					{
-						writer.Write(EcmaScriptWriter.RootDeclaration, ns);
+						writer.Write(RootDeclaration, ns);
 					}
 				}
 
 				if (isDebug)
 				{
-					writer.WriteLine(EcmaScriptWriter.NamespaceCheckDebug, ns);
+					writer.WriteLine(NamespaceCheckDebug, ns);
 				}
 				else
 				{
-					writer.Write(EcmaScriptWriter.NamespaceCheck, ns);
+					writer.Write(NamespaceCheck, ns);
 				}
 			}
 
@@ -234,7 +238,7 @@ if (""undefined"" === typeof {0}) {{
 		/// <param name="value"></param>
 		public override void Write(DateTime value)
 		{
-			EcmaScriptWriter.WriteEcmaScriptDate(this, value);
+			WriteEcmaScriptDate(this, value);
 		}
 
 		/// <summary>
@@ -243,7 +247,7 @@ if (""undefined"" === typeof {0}) {{
 		/// <param name="value">Single</param>
 		public override void Write(float value)
 		{
-			this.TextWriter.Write(value.ToString("r"));
+			TextWriter.Write(value.ToString("r"));
 		}
 
 		/// <summary>
@@ -252,18 +256,19 @@ if (""undefined"" === typeof {0}) {{
 		/// <param name="value">Double</param>
 		public override void Write(double value)
 		{
-			this.TextWriter.Write(value.ToString("r"));
+			TextWriter.Write(value.ToString("r"));
 		}
 
-		protected override void Write(object value, bool isProperty, Type fieldType = null )
+		protected override void Write(object value, bool isProperty, Type fieldType = null)
 		{
 			if (value is Regex)
 			{
-				if (isProperty && this.Settings.PrettyPrint)
+				if (isProperty && Settings.PrettyPrint)
 				{
-					this.TextWriter.Write(' ');
+					TextWriter.Write(' ');
 				}
-				EcmaScriptWriter.WriteEcmaScriptRegExp(this, (Regex)value);
+
+				WriteEcmaScriptRegExp(this, (Regex)value);
 				return;
 			}
 
@@ -275,7 +280,7 @@ if (""undefined"" === typeof {0}) {{
 			if (EcmaScriptIdentifier.IsValidIdentifier(name, false))
 			{
 				// write out without quoting
-				this.TextWriter.Write(name);
+				TextWriter.Write(name);
 			}
 			else
 			{
@@ -289,15 +294,14 @@ if (""undefined"" === typeof {0}) {{
 			if (value.Kind == DateTimeKind.Unspecified)
 			{
 				// unknown timezones serialize directly to become browser-local
-				writer.TextWriter.Write(
-					EcmaScriptWriter.EcmaScriptDateCtor7,
-					value.Year,			// yyyy
-					value.Month-1,		// 0-11
-					value.Day,			// 1-31
-					value.Hour,			// 0-23
-					value.Minute,		// 0-60
-					value.Second,		// 0-60
-					value.Millisecond);	// 0-999
+				writer.TextWriter.Write(EcmaScriptDateCtor7,
+					value.Year, // yyyy
+					value.Month - 1, // 0-11
+					value.Day, // 1-31
+					value.Hour, // 0-23
+					value.Minute, // 0-60
+					value.Second, // 0-60
+					value.Millisecond); // 0-999
 				return;
 			}
 
@@ -308,14 +312,13 @@ if (""undefined"" === typeof {0}) {{
 			}
 
 			// find the time since Jan 1, 1970
-			TimeSpan duration = value.Subtract(EcmaScriptWriter.EcmaScriptEpoch);
+			TimeSpan duration = value.Subtract(EcmaScriptEpoch);
 
 			// get the total milliseconds
 			long ticks = (long)duration.TotalMilliseconds;
 
 			// write out as a Date constructor
-			writer.TextWriter.Write(
-				EcmaScriptWriter.EcmaScriptDateCtor1,
+			writer.TextWriter.Write(EcmaScriptDateCtor1,
 				ticks);
 		}
 
@@ -330,7 +333,7 @@ if (""undefined"" === typeof {0}) {{
 		/// </remarks>
 		public static void WriteEcmaScriptRegExp(JsonWriter writer, Regex regex)
 		{
-			EcmaScriptWriter.WriteEcmaScriptRegExp(writer, regex, false);
+			WriteEcmaScriptRegExp(writer, regex, false);
 		}
 
 		/// <summary>
@@ -352,14 +355,14 @@ if (""undefined"" === typeof {0}) {{
 
 			// Regex.ToString() returns the original pattern
 			string pattern = regex.ToString();
-			if (String.IsNullOrEmpty(pattern))
+			if (string.IsNullOrEmpty(pattern))
 			{
 				// must output something otherwise becomes a code comment
-				pattern = EcmaScriptWriter.EmptyRegExpLiteral;
+				pattern = EmptyRegExpLiteral;
 			}
 
 			string modifiers = isGlobal ? "g" : "";
-			switch (regex.Options & (RegexOptions.IgnoreCase|RegexOptions.Multiline))
+			switch (regex.Options & (RegexOptions.IgnoreCase | RegexOptions.Multiline))
 			{
 				case RegexOptions.IgnoreCase:
 				{
@@ -371,14 +374,14 @@ if (""undefined"" === typeof {0}) {{
 					modifiers += "m";
 					break;
 				}
-				case RegexOptions.IgnoreCase|RegexOptions.Multiline:
+				case RegexOptions.IgnoreCase | RegexOptions.Multiline:
 				{
 					modifiers += "im";
 					break;
 				}
 			}
 
-			writer.TextWriter.Write(EcmaScriptWriter.RegExpLiteralDelim);
+			writer.TextWriter.Write(RegExpLiteralDelim);
 
 			int length = pattern.Length;
 			int start = 0;
@@ -387,11 +390,11 @@ if (""undefined"" === typeof {0}) {{
 			{
 				switch (pattern[i])
 				{
-					case EcmaScriptWriter.RegExpLiteralDelim:
+					case RegExpLiteralDelim:
 					{
 						writer.TextWriter.Write(pattern.Substring(start, i - start));
 						start = i + 1;
-						writer.TextWriter.Write(EcmaScriptWriter.OperatorCharEscape);
+						writer.TextWriter.Write(OperatorCharEscape);
 						writer.TextWriter.Write(pattern[i]);
 						break;
 					}
@@ -399,7 +402,7 @@ if (""undefined"" === typeof {0}) {{
 			}
 
 			writer.TextWriter.Write(pattern.Substring(start, length - start));
-			writer.TextWriter.Write(EcmaScriptWriter.RegExpLiteralDelim);
+			writer.TextWriter.Write(RegExpLiteralDelim);
 			writer.TextWriter.Write(modifiers);
 		}
 

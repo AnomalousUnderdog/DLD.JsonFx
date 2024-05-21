@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,10 +27,9 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
+
 #endregion License
 
-using System;
-using System.Reflection;
 #if !UNITY_5_3_OR_NEWER
 using System.Xml.Serialization;
 #endif
@@ -39,15 +39,16 @@ using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.Reflection;
+using TCU = DLD.JsonFx.TypeCoercionUtility;
 
-using TCU = Pathfinding.Serialization.JsonFx.TypeCoercionUtility;
-
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// Designates a property or field to not be serialized.
 	/// </summary>
-	[AttributeUsage(AttributeTargets.All, AllowMultiple=false)]
+	[AttributeUsage(AttributeTargets.All)]
 	public sealed class JsonIgnoreAttribute : Attribute
 	{
 		#region Methods
@@ -67,13 +68,17 @@ namespace Pathfinding.Serialization.JsonFx
 			Type type = value.GetType();
 
 			ICustomAttributeProvider provider = null;
-			if (TCU.GetTypeInfo(type).IsEnum) {
-				provider = TCU.GetTypeInfo(type).GetField(Enum.GetName(type, value));
-			} else {
+			if (TypeCoercionUtility.GetTypeInfo(type).IsEnum)
+			{
+				provider = TypeCoercionUtility.GetTypeInfo(type).GetField(Enum.GetName(type, value));
+			}
+			else
+			{
 				provider = value as ICustomAttributeProvider;
 			}
 
-			if (provider == null) {
+			if (provider == null)
+			{
 				throw new ArgumentException();
 			}
 
@@ -95,9 +100,9 @@ namespace Pathfinding.Serialization.JsonFx
 			Type type = value.GetType();
 
 			ICustomAttributeProvider provider = null;
-			if (TCU.GetTypeInfo(type).IsEnum)
+			if (TypeCoercionUtility.GetTypeInfo(type).IsEnum)
 			{
-				provider = TCU.GetTypeInfo(type).GetField(Enum.GetName(type, value));
+				provider = TypeCoercionUtility.GetTypeInfo(type).GetField(Enum.GetName(type, value));
 			}
 			else
 			{

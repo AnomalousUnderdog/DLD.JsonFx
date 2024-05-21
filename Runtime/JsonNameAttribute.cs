@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,30 +27,28 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
-using System.Reflection;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.Reflection;
 
-using TCU = Pathfinding.Serialization.JsonFx.TypeCoercionUtility;
-
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// Specifies the naming to use for a property or field when serializing
 	/// </summary>
-	[AttributeUsage(AttributeTargets.All, AllowMultiple=false)]
+	[AttributeUsage(AttributeTargets.All)]
 	public class JsonNameAttribute : Attribute
 	{
 		#region Fields
 
-		private string jsonName = null;
+		string _jsonName;
 
 		#endregion Fields
 
@@ -69,9 +68,9 @@ namespace Pathfinding.Serialization.JsonFx
 		public JsonNameAttribute(string jsonName)
 		{
 #if !NO_ECMASCRIPT
-			this.jsonName = EcmaScriptIdentifier.EnsureValidIdentifier(jsonName, false);
+			_jsonName = EcmaScriptIdentifier.EnsureValidIdentifier(jsonName, false);
 #else
-			this.jsonName = jsonName;
+			_jsonName = jsonName;
 #endif
 		}
 
@@ -84,12 +83,16 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </summary>
 		public string Name
 		{
-			get { return this.jsonName; }
-			set {
+			get
+			{
+				return _jsonName;
+			}
+			set
+			{
 #if !NO_ECMASCRIPT
-				this.jsonName = EcmaScriptIdentifier.EnsureValidIdentifier(value, false);
+				_jsonName = EcmaScriptIdentifier.EnsureValidIdentifier(value, false);
 #else
-				this.jsonName = value;
+				_jsonName = value;
 #endif
 			}
 		}
@@ -113,28 +116,30 @@ namespace Pathfinding.Serialization.JsonFx
 			Type type = value.GetType();
 			MemberInfo memberInfo = null;
 
-			if (TCU.GetTypeInfo(type).IsEnum)
+			if (TypeCoercionUtility.GetTypeInfo(type).IsEnum)
 			{
 				string name = Enum.GetName(type, value);
-				if (String.IsNullOrEmpty(name))
+				if (string.IsNullOrEmpty(name))
 				{
 					return null;
 				}
-				memberInfo = TCU.GetTypeInfo(type).GetField(name);
+
+				memberInfo = TypeCoercionUtility.GetTypeInfo(type).GetField(name);
 			}
 			else
 			{
 				memberInfo = value as MemberInfo;
 			}
 
-			if (MemberInfo.Equals (memberInfo, null)) {
-				throw new ArgumentException ();
+			if (Equals(memberInfo, null))
+			{
+				throw new ArgumentException();
 			}
 
 #if WINDOWS_STORE
 			JsonNameAttribute attribute = memberInfo.GetCustomAttribute<JsonNameAttribute> (true);
 #else
-			JsonNameAttribute attribute = Attribute.GetCustomAttribute(memberInfo, typeof(JsonNameAttribute)) as JsonNameAttribute;
+			JsonNameAttribute attribute = GetCustomAttribute(memberInfo, typeof(JsonNameAttribute)) as JsonNameAttribute;
 #endif
 			return attribute != null ? attribute.Name : null;
 		}

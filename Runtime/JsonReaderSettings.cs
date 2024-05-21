@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,18 +27,18 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
-using System.Collections.Generic;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
+using System.Collections.Generic;
 
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// Controls the deserialization settings for JsonReader
@@ -47,8 +48,9 @@ namespace Pathfinding.Serialization.JsonFx
 		#region Fields
 
 		internal readonly TypeCoercionUtility Coercion = new TypeCoercionUtility();
-		private bool allowUnquotedObjectKeys = false;
-		private string typeHintName;
+		bool _allowUnquotedObjectKeys;
+		string _typeHintName;
+
 		#endregion Fields
 
 		#region Properties
@@ -63,17 +65,17 @@ namespace Pathfinding.Serialization.JsonFx
 		/// deserialization all references will point to the correct objects even if
 		/// it was used in different places (this can be good even if you do not have
 		/// cyclic references in your data).
-		/// 
-		/// More specifically, if your object graph (where one reference is a directed edge) 
+		///
+		/// More specifically, if your object graph (where one reference is a directed edge)
 		/// is a tree, this should be false, otherwise it should be true.
-		/// 
+		///
 		/// Note also that the deserialization methods which take a start position
 		/// will not work with this setting enabled.
 		/// </remarks>
 		/// <value>
 		/// <c>true</c> if handle cyclic references; otherwise, <c>false</c>.
 		/// </value>
-		public bool HandleCyclicReferences {get; set;}
+		public bool HandleCyclicReferences { get; set; }
 
 		/// <summary>
 		/// Gets and sets if ValueTypes can accept values of null
@@ -86,8 +88,8 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </remarks>
 		public bool AllowNullValueTypes
 		{
-			get { return this.Coercion.AllowNullValueTypes; }
-			set { this.Coercion.AllowNullValueTypes = value; }
+			get => Coercion.AllowNullValueTypes;
+			set => Coercion.AllowNullValueTypes = value;
 		}
 
 		/// <summary>
@@ -95,8 +97,8 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </summary>
 		public bool AllowUnquotedObjectKeys
 		{
-			get { return this.allowUnquotedObjectKeys; }
-			set { this.allowUnquotedObjectKeys = value; }
+			get => _allowUnquotedObjectKeys;
+			set => _allowUnquotedObjectKeys = value;
 		}
 
 		/// <summary>
@@ -104,14 +106,14 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </summary>
 		public string TypeHintName
 		{
-			get { return this.typeHintName; }
-			set { this.typeHintName = value; }
+			get => _typeHintName;
+			set => _typeHintName = value;
 		}
 
 
 		public void SetFieldSerializationRule(FieldSerializationRuleType newVal)
 		{
-			this.Coercion.SetFieldSerializationRule(newVal);
+			Coercion.SetFieldSerializationRule(newVal);
 		}
 
 		#endregion Properties
@@ -126,25 +128,27 @@ namespace Pathfinding.Serialization.JsonFx
 		internal bool IsTypeHintName(string name)
 		{
 			return
-				!String.IsNullOrEmpty(name) &&
-				!String.IsNullOrEmpty(this.typeHintName) &&
-				StringComparer.Ordinal.Equals(this.typeHintName, name);
+				!string.IsNullOrEmpty(name) &&
+				!string.IsNullOrEmpty(_typeHintName) &&
+				StringComparer.Ordinal.Equals(_typeHintName, name);
 		}
-	
-		protected List<JsonConverter> converters = new List<JsonConverter>();
-		
-		public virtual JsonConverter GetConverter (Type type) {
-			for (int i=0;i<converters.Count;i++)
-				if (converters[i].CanConvert (type))
-					return converters[i];
-			
+
+		protected readonly List<JsonConverter> Converters = new List<JsonConverter>();
+
+		public virtual JsonConverter GetConverter(TP type)
+		{
+			for (int i = 0; i < Converters.Count; i++)
+				if (Converters[i].CanConvert(type))
+					return Converters[i];
+
 			return null;
 		}
-		
-		public virtual void AddTypeConverter (JsonConverter converter) {
-			converters.Add (converter);
+
+		public virtual void AddTypeConverter(JsonConverter converter)
+		{
+			Converters.Add(converter);
 		}
-		
+
 		#endregion Methods
 	}
 }

@@ -1,4 +1,5 @@
 #region License
+
 /*---------------------------------------------------------------------------------*\
 
 	Distributed under the terms of an MIT-style license:
@@ -26,18 +27,18 @@
 	THE SOFTWARE.
 
 \*---------------------------------------------------------------------------------*/
-#endregion License
 
-using System;
+#endregion License
 
 #if WINDOWS_STORE
 using TP = System.Reflection.TypeInfo;
 #else
 using TP = System.Type;
 #endif
+using System;
 
 #if !NO_ECMASCRIPT
-namespace Pathfinding.Serialization.JsonFx
+namespace DLD.JsonFx
 {
 	/// <summary>
 	/// Represents an ECMAScript identifier for serialization.
@@ -46,7 +47,7 @@ namespace Pathfinding.Serialization.JsonFx
 	{
 		#region Fields
 
-		private readonly string identifier;
+		readonly string _identifier;
 
 		#endregion Fields
 
@@ -65,8 +66,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </summary>
 		public EcmaScriptIdentifier(string ident)
 		{
-			this.identifier = String.IsNullOrEmpty(ident) ? String.Empty :
-				EcmaScriptIdentifier.EnsureValidIdentifier(ident, true);
+			_identifier = string.IsNullOrEmpty(ident) ? string.Empty : EnsureValidIdentifier(ident, true);
 		}
 
 		#endregion Init
@@ -76,10 +76,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <summary>
 		/// Gets the ECMAScript identifier represented by this instance.
 		/// </summary>
-		public string Identifier
-		{
-			get { return this.identifier; }
-		}
+		public string Identifier => _identifier;
 
 		#endregion Properties
 
@@ -92,7 +89,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <returns>varExpr</returns>
 		public static string EnsureValidIdentifier(string varExpr, bool nested)
 		{
-			return EcmaScriptIdentifier.EnsureValidIdentifier(varExpr, nested, true);
+			return EnsureValidIdentifier(varExpr, nested, true);
 		}
 
 		/// <summary>
@@ -102,20 +99,21 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <returns>varExpr</returns>
 		public static string EnsureValidIdentifier(string varExpr, bool nested, bool throwOnEmpty)
 		{
-			if (String.IsNullOrEmpty(varExpr))
+			if (string.IsNullOrEmpty(varExpr))
 			{
 				if (throwOnEmpty)
 				{
 					throw new ArgumentException("Variable expression is empty.");
 				}
-				return String.Empty;
+
+				return string.Empty;
 			}
 
 			varExpr = varExpr.Replace(" ", "");
 
-			if (!EcmaScriptIdentifier.IsValidIdentifier(varExpr, nested))
+			if (!IsValidIdentifier(varExpr, nested))
 			{
-				throw new ArgumentException("Variable expression \""+varExpr+"\" is not supported.");
+				throw new ArgumentException("Variable expression \"" + varExpr + "\" is not supported.");
 			}
 
 			return varExpr;
@@ -128,7 +126,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <returns>varExpr</returns>
 		/// <remarks>
 		/// http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-262.pdf
-		/// 
+		///
 		/// IdentifierName =
 		///		IdentifierStart | IdentifierName IdentifierPart
 		/// IdentifierStart =
@@ -138,7 +136,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// </remarks>
 		public static bool IsValidIdentifier(string varExpr, bool nested)
 		{
-			if (String.IsNullOrEmpty(varExpr))
+			if (string.IsNullOrEmpty(varExpr))
 			{
 				return false;
 			}
@@ -148,15 +146,16 @@ namespace Pathfinding.Serialization.JsonFx
 				string[] parts = varExpr.Split('.');
 				foreach (string part in parts)
 				{
-					if (!EcmaScriptIdentifier.IsValidIdentifier(part, false))
+					if (!IsValidIdentifier(part, false))
 					{
 						return false;
 					}
 				}
+
 				return true;
 			}
 
-			if (EcmaScriptIdentifier.IsReservedWord(varExpr))
+			if (IsReservedWord(varExpr))
 			{
 				return false;
 			}
@@ -164,14 +163,14 @@ namespace Pathfinding.Serialization.JsonFx
 			bool indentPart = false;
 			foreach (char ch in varExpr)
 			{
-				if (indentPart && Char.IsDigit(ch))
+				if (indentPart && char.IsDigit(ch))
 				{
 					// digits are only allowed after first char
 					continue;
 				}
 
 				// can be start or part
-				if (Char.IsLetter(ch) || ch == '_' || ch == '$')
+				if (char.IsLetter(ch) || ch == '_' || ch == '$')
 				{
 					indentPart = true;
 					continue;
@@ -183,7 +182,7 @@ namespace Pathfinding.Serialization.JsonFx
 			return true;
 		}
 
-		private static bool IsReservedWord(string varExpr)
+		static bool IsReservedWord(string varExpr)
 		{
 			// TODO: investigate doing this like Rhino does (switch on length check first letter or two)
 			switch (varExpr)
@@ -292,9 +291,10 @@ namespace Pathfinding.Serialization.JsonFx
 		{
 			if (ident == null)
 			{
-				return String.Empty;
+				return string.Empty;
 			}
-			return ident.identifier;
+
+			return ident._identifier;
 		}
 
 		/// <summary>
@@ -318,14 +318,14 @@ namespace Pathfinding.Serialization.JsonFx
 
 		void IJsonSerializable.WriteJson(JsonWriter writer)
 		{
-			if (String.IsNullOrEmpty(this.identifier))
+			if (string.IsNullOrEmpty(_identifier))
 			{
 				writer.TextWriter.Write("null");
 			}
 			else
 			{
 				// TODO: determine if this should output parens around identifier
-				writer.TextWriter.Write(this.identifier);
+				writer.TextWriter.Write(_identifier);
 			}
 		}
 
@@ -346,13 +346,13 @@ namespace Pathfinding.Serialization.JsonFx
 				return base.Equals(obj);
 			}
 
-			if (String.IsNullOrEmpty(this.identifier) && String.IsNullOrEmpty(that.identifier))
+			if (string.IsNullOrEmpty(_identifier) && string.IsNullOrEmpty(that._identifier))
 			{
 				// null and String.Empty are equivalent
 				return true;
 			}
 
-			return StringComparer.Ordinal.Equals(this.identifier, that.identifier);
+			return StringComparer.Ordinal.Equals(_identifier, that._identifier);
 		}
 
 		/// <summary>
@@ -361,7 +361,7 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <returns></returns>
 		public override string ToString()
 		{
-			return this.identifier;
+			return _identifier;
 		}
 
 		/// <summary>
@@ -370,12 +370,12 @@ namespace Pathfinding.Serialization.JsonFx
 		/// <returns></returns>
 		public override int GetHashCode()
 		{
-			if (this.identifier == null)
+			if (_identifier == null)
 			{
 				return 0;
 			}
 
-			return this.identifier.GetHashCode();
+			return _identifier.GetHashCode();
 		}
 
 		#endregion Object Overrides
