@@ -1,0 +1,17 @@
+{
+  "name": "com.dreamlordsdigital.jsonfx",
+  "version": "0.1.0",
+  "displayName": "DLD JsonFx",
+  "description": "A modified copy of an old version of JsonFx that adds lenient type coercion, polymorphic collections, and checksum creation.",
+  "licensesUrl": "https://mit-license.org/",
+  "keywords": [
+    "json",
+    "JsonFx",
+    "DLD",
+    "Dreamlords"
+  ],
+  "author": {
+    "name": "Ferdinand Joseph Fernandez"
+  },
+  "type": "library"
+}
