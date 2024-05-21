@@ -63,22 +63,6 @@ namespace DLD.JsonFx
 		const string ErrorDefaultCtor = "Only objects with default constructors can be deserialized. ({0})";
 		const string ErrorCannotInstantiate = "Interfaces, Abstract classes, and unsupported ValueTypes cannot be deserialized. ({0})";
 
-		const string BUILT_IN_ASSEMBLY = "Assembly-CSharp";
-		const string BUILT_IN_ASSEMBLY_FIRST_PASS = "Assembly-CSharp-firstpass";
-		const string BUILT_IN_EDITOR_ASSEMBLY = "Assembly-CSharp-Editor";
-		const string BUILT_IN_EDITOR_ASSEMBLY_FIRST_PASS = "Assembly-CSharp-Editor-firstpass";
-
-		/// <summary>
-		/// Ever since we moved to explicitly defined assemblies,
-		/// the game's code has been moved to an assembly called Main.
-		/// </summary>
-		const string MAIN_ASSEMBLY = "Main";
-
-		/// <summary>
-		/// Some serialization unit tests are in this assembly.
-		/// </summary>
-		const string TEXT_DATA_TEST_ASSEMBLY = "DLD.TextData.Tests";
-
 		#endregion Constants
 
 		#region Fields
@@ -149,13 +133,14 @@ namespace DLD.JsonFx
 		/// </summary>
 		/// <param name="result">the previous result</param>
 		/// <param name="typeInfo">the type info string to use</param>
+		/// <param name="assemblyNamesToSearchThroughIfNotFound"></param>
+		/// <param name="searchThroughAllAssembliesIfNotFound"></param>
 		/// <param name="objectType">reference to the objectType</param>
 		/// <param name="memberMap">reference to the memberMap</param>
 		/// <returns></returns>
-		internal object ProcessTypeHint(IDictionary result,
-			string typeInfo,
-			ref TP objectType,
-			ref Dictionary<string, MemberInfo> memberMap)
+		internal object ProcessTypeHint(IDictionary result, string typeInfo,
+			IReadOnlyList<string> assemblyNamesToSearchThroughIfNotFound, bool searchThroughAllAssembliesIfNotFound,
+			ref TP objectType, ref Dictionary<string, MemberInfo> memberMap)
 		{
 			//Debug.Log(string.Format("ProcessTypeHint: typeInfo is {0}", typeInfo));
 			if (string.IsNullOrEmpty(typeInfo))
@@ -166,7 +151,8 @@ namespace DLD.JsonFx
 				return result;
 			}
 
-			Type hintedType = GetType(typeInfo);
+			Type hintedType = GetType(typeInfo, assemblyNamesToSearchThroughIfNotFound,
+				searchThroughAllAssembliesIfNotFound);
 
 			if (Equals(hintedType, null))
 			{
@@ -186,10 +172,12 @@ namespace DLD.JsonFx
 			return CoerceType(hintedType, result, out memberMap);
 		}
 
-		internal object ProcessTypeHint(object result, string typeInfo, ref TP objectType,
-			ref Dictionary<string, MemberInfo> memberMap)
+		internal object ProcessTypeHint(object result, string typeInfo,
+			IReadOnlyList<string> assemblyNamesToSearchThroughIfNotFound, bool searchThroughAllAssembliesIfNotFound,
+			ref TP objectType, ref Dictionary<string, MemberInfo> memberMap)
 		{
-			Type hintedType = GetType(typeInfo);
+			Type hintedType = GetType(typeInfo, assemblyNamesToSearchThroughIfNotFound,
+				searchThroughAllAssembliesIfNotFound);
 
 			if (Equals(hintedType, null))
 			{
@@ -217,7 +205,7 @@ namespace DLD.JsonFx
 			return InstantiateObject(objectType, out memberMap);
 		}
 
-		TP GetType(string typeInfo)
+		TP GetType(string typeInfo, IReadOnlyList<string> assemblyNamesToSearchThroughIfNotFound, bool searchThroughAllAssembliesIfNotFound)
 		{
 			if (string.IsNullOrWhiteSpace(typeInfo))
 			{
@@ -234,77 +222,48 @@ namespace DLD.JsonFx
 			if (hintedType != null)
 			{
 				_hintedTypeCache[typeInfo] = hintedType;
+				return hintedType;
 			}
-			else
+
+			// ---------------------------------------------------------
+			// Type.GetType failed.
+			// Try with other assemblies.
+			// Remove the assembly name specified in the string,
+			// then try the assembly names specified.
+
+			int typeCommaIdx = typeInfo.IndexOf(",", StringComparison.Ordinal);
+			string typeName = typeCommaIdx != -1 ? typeInfo.Substring(0, typeCommaIdx) : typeInfo;
+
+			if (assemblyNamesToSearchThroughIfNotFound != null)
 			{
-				// Type.GetType failed.
-				// Try with other assemblies.
-				// Remove the assembly name specified in the string,
-				// then try the usual assembly names.
-
-				int typeCommaIdx = typeInfo.IndexOf(",", StringComparison.Ordinal);
-				string typeName = typeCommaIdx != -1 ? typeInfo.Substring(0, typeCommaIdx) : typeInfo;
-
-				string tryTypeInfo = $"{typeName}, {MAIN_ASSEMBLY}";
-				hintedType = Type.GetType(tryTypeInfo, false);
-				if (hintedType != null)
+				for (int i = 0; i < assemblyNamesToSearchThroughIfNotFound.Count; i++)
 				{
-					Debug.Log($"Found: {tryTypeInfo} (for {typeInfo})");
-					_hintedTypeCache[typeInfo] = hintedType;
-					return hintedType;
+					string tryTypeInfo = $"{typeName}, {assemblyNamesToSearchThroughIfNotFound[i]}";
+					hintedType = Type.GetType(tryTypeInfo, false);
+					if (hintedType != null)
+					{
+						_hintedTypeCache[typeInfo] = hintedType;
+						return hintedType;
+					}
 				}
-
-				tryTypeInfo = $"{typeName}, {TEXT_DATA_TEST_ASSEMBLY}";
-				hintedType = Type.GetType(tryTypeInfo, false);
-				if (hintedType != null)
-				{
-					Debug.Log($"Found: {tryTypeInfo} (for {typeInfo})");
-					_hintedTypeCache[typeInfo] = hintedType;
-					return hintedType;
-				}
-
-				tryTypeInfo = $"{typeName}, {BUILT_IN_ASSEMBLY}";
-				hintedType = Type.GetType(tryTypeInfo, false);
-				if (hintedType != null)
-				{
-					Debug.Log($"Found: {tryTypeInfo} (for {typeInfo})");
-					_hintedTypeCache[typeInfo] = hintedType;
-					return hintedType;
-				}
-
-				tryTypeInfo = $"{typeName}, {BUILT_IN_ASSEMBLY_FIRST_PASS}";
-				hintedType = Type.GetType(tryTypeInfo, false);
-				if (hintedType != null)
-				{
-					Debug.Log($"Found: {tryTypeInfo} (for {typeInfo})");
-					_hintedTypeCache[typeInfo] = hintedType;
-					return hintedType;
-				}
-
-#if UNITY_EDITOR
-				tryTypeInfo = $"{typeName}, {BUILT_IN_EDITOR_ASSEMBLY}";
-				hintedType = Type.GetType(tryTypeInfo, false);
-				if (hintedType != null)
-				{
-					Debug.Log($"Found: {tryTypeInfo} (for {typeInfo})");
-					_hintedTypeCache[typeInfo] = hintedType;
-					return hintedType;
-				}
-
-				tryTypeInfo = $"{typeName}, {BUILT_IN_EDITOR_ASSEMBLY_FIRST_PASS}";
-				hintedType = Type.GetType(tryTypeInfo, false);
-				if (hintedType != null)
-				{
-					Debug.Log($"Found: {tryTypeInfo} (for {typeInfo})");
-					_hintedTypeCache[typeInfo] = hintedType;
-					return hintedType;
-				}
-#endif
-
-				//todo search from all assemblies currently loaded?
 			}
 
-			return hintedType;
+			if (searchThroughAllAssembliesIfNotFound)
+			{
+				var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+				for (int i = 0; i < assemblies.Length; i++)
+				{
+					string tryTypeInfo = $"{typeName}, {assemblies[i].GetName().Name}";
+					hintedType = Type.GetType(tryTypeInfo, false);
+					if (hintedType != null)
+					{
+						_hintedTypeCache[typeInfo] = hintedType;
+						return hintedType;
+					}
+				}
+			}
+
+			return null;
 		}
 
 		internal object InstantiateObject(TP objectType)

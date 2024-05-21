@@ -50,6 +50,8 @@ namespace DLD.JsonFx
 		internal readonly TypeCoercionUtility Coercion = new TypeCoercionUtility();
 		bool _allowUnquotedObjectKeys;
 		string _typeHintName;
+		List<string> _assemblyNamesToSearchThroughIfNotFound = new List<string>();
+		bool _searchThroughAllAssembliesIfNotFound;
 
 		#endregion Fields
 
@@ -108,6 +110,26 @@ namespace DLD.JsonFx
 		{
 			get => _typeHintName;
 			set => _typeHintName = value;
+		}
+
+		/// <summary>
+		/// If object to deserialize has a type hint, and the indicated type was not found,
+		/// it will try to search for the type in these assemblies instead.
+		/// </summary>
+		public List<string> AssemblyNamesToSearchThroughIfNotFound
+		{
+			get => _assemblyNamesToSearchThroughIfNotFound;
+			set => _assemblyNamesToSearchThroughIfNotFound = value;
+		}
+
+		/// <summary>
+		/// If object to deserialize has a type hint, and the indicated type was not found,
+		/// it will try to search for the type in all currently loaded assemblies.
+		/// </summary>
+		public bool SearchThroughAllAssembliesIfNotFound
+		{
+			get => _searchThroughAllAssembliesIfNotFound;
+			set => _searchThroughAllAssembliesIfNotFound = value;
 		}
 
 

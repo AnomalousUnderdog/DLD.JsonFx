@@ -712,7 +712,9 @@ namespace DLD.JsonFx
 				{
 					if (Equals(objectType, null) && _settings.IsTypeHintName(memberName))
 					{
-						result = _settings.Coercion.ProcessTypeHint(idict, value as string, ref objectType, ref memberMap);
+						result = _settings.Coercion.ProcessTypeHint(idict, value as string,
+							_settings.AssemblyNamesToSearchThroughIfNotFound, _settings.SearchThroughAllAssembliesIfNotFound,
+							ref objectType, ref memberMap);
 					}
 					else
 					{
@@ -723,7 +725,9 @@ namespace DLD.JsonFx
 				{
 					if (_settings.IsTypeHintName(memberName))
 					{
-						result = _settings.Coercion.ProcessTypeHint(result, value as string, ref objectType, ref memberMap);
+						result = _settings.Coercion.ProcessTypeHint(result, value as string,
+							_settings.AssemblyNamesToSearchThroughIfNotFound, _settings.SearchThroughAllAssembliesIfNotFound,
+							ref objectType, ref memberMap);
 					}
 					else
 					{
