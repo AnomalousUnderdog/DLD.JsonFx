@@ -67,7 +67,7 @@ namespace DLD.JsonFx
 
 		#region Fields
 
-		Dictionary<TP, Dictionary<string, MemberInfo>> _memberMapCache;
+		ConcurrentDictionary<TP, Dictionary<string, MemberInfo>> _memberMapCache;
 		bool _allowNullValueTypes = true;
 
 		readonly ConcurrentDictionary<string, TP> _hintedTypeCache = new ConcurrentDictionary<string, TP>();
@@ -94,14 +94,14 @@ namespace DLD.JsonFx
 #endif
 		}
 
-		Dictionary<TP, Dictionary<string, MemberInfo>> MemberMapCache
+		IDictionary<TP, Dictionary<string, MemberInfo>> MemberMapCache
 		{
 			get
 			{
 				if (_memberMapCache == null)
 				{
 					// instantiate space for cache
-					_memberMapCache = new Dictionary<Type, Dictionary<string, MemberInfo>>();
+					_memberMapCache = new ConcurrentDictionary<Type, Dictionary<string, MemberInfo>>();
 				}
 
 				return _memberMapCache;
