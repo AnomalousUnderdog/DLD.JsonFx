@@ -50,6 +50,7 @@ namespace DLD.JsonFx
 	public delegate void WriteDelegate<T>(JsonWriter writer, T value);
 
 	public delegate bool FieldSerializationRuleType(FieldInfo fieldType);
+	public delegate string FieldSerializedNameType(MemberInfo memberInfo);
 
 	/// <summary>
 	/// Controls the serialization settings for JsonWriter
@@ -65,6 +66,9 @@ namespace DLD.JsonFx
 		string _tab = "\t";
 		string _typeHintName;
 		bool _useXmlSerializationAttributes;
+
+		FieldSerializationRuleType _shouldFieldBeSerialized;
+		FieldSerializedNameType _fieldSerializedName;
 
 		TypeCoercionUtility _coercion;
 
@@ -198,7 +202,12 @@ namespace DLD.JsonFx
 			Coercion.SetFieldSerializationRule(newVal);
 		}
 
-		FieldSerializationRuleType _shouldFieldBeSerialized;
+		public void SetFieldSerializedName(FieldSerializedNameType newVal)
+		{
+			_fieldSerializedName = newVal;
+			Coercion.SetFieldSerializedName(newVal);
+		}
+		public FieldSerializedNameType FieldSerializedName => _fieldSerializedName;
 
 
 		/// <summary>

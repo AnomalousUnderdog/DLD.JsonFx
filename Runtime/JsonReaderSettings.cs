@@ -137,7 +137,10 @@ namespace DLD.JsonFx
 		{
 			Coercion.SetFieldSerializationRule(newVal);
 		}
-
+		public void SetFieldSerializedName(FieldSerializedNameType newVal)
+		{
+			Coercion.SetFieldSerializedName(newVal);
+		}
 		#endregion Properties
 
 		#region Methods

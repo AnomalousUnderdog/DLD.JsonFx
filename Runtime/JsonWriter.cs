@@ -798,7 +798,7 @@ namespace DLD.JsonFx
 				var flagNames = new string[flags.Length];
 				for (int i = 0; i < flags.Length; i++)
 				{
-					flagNames[i] = JsonNameAttribute.GetJsonName(flags[i]);
+					flagNames[i] = JsonNameAttribute.GetJsonName(flags[i], _settings.FieldSerializedName);
 					if (string.IsNullOrEmpty(flagNames[i]))
 					{
 						flagNames[i] = flags[i].ToString("f");
@@ -809,7 +809,7 @@ namespace DLD.JsonFx
 			}
 			else
 			{
-				enumName = JsonNameAttribute.GetJsonName(value);
+				enumName = JsonNameAttribute.GetJsonName(value, _settings.FieldSerializedName);
 				if (string.IsNullOrEmpty(enumName))
 				{
 					enumName = value.ToString("f");
