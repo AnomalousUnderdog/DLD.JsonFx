@@ -138,7 +138,13 @@ namespace DLD.JsonFx
 
 			if (customNameType != null)
 			{
-				return EcmaScriptIdentifier.EnsureValidIdentifier(customNameType(memberInfo), false);
+				string customName = customNameType(memberInfo);
+				if (!string.IsNullOrEmpty(customName))
+				{
+					return EcmaScriptIdentifier.EnsureValidIdentifier(customName, false);
+				}
+
+				return null;
 			}
 
 #if WINDOWS_STORE
