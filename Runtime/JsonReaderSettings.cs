@@ -133,11 +133,11 @@ namespace DLD.JsonFx
 		}
 
 
-		public void SetFieldSerializationRule(FieldSerializationRuleType newVal)
+		public void SetFieldSerializationRule(SerializationRuleType newVal)
 		{
 			Coercion.SetFieldSerializationRule(newVal);
 		}
-		public void SetFieldSerializedName(FieldSerializedNameType newVal)
+		public void SetFieldSerializedName(SerializedNameType newVal)
 		{
 			Coercion.SetFieldSerializedName(newVal);
 		}

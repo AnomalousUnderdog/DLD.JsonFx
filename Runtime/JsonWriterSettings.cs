@@ -49,8 +49,8 @@ namespace DLD.JsonFx
 	/// <param name="value">the value to serialize</param>
 	public delegate void WriteDelegate<T>(JsonWriter writer, T value);
 
-	public delegate bool FieldSerializationRuleType(FieldInfo fieldType);
-	public delegate string FieldSerializedNameType(MemberInfo memberInfo);
+	public delegate bool SerializationRuleType(MemberInfo fieldType);
+	public delegate string SerializedNameType(MemberInfo memberInfo);
 
 	/// <summary>
 	/// Controls the serialization settings for JsonWriter
@@ -67,8 +67,8 @@ namespace DLD.JsonFx
 		string _typeHintName;
 		bool _useXmlSerializationAttributes;
 
-		FieldSerializationRuleType _shouldFieldBeSerialized;
-		FieldSerializedNameType _fieldSerializedName;
+		SerializationRuleType _shouldBeSerialized;
+		SerializedNameType _serializedName;
 
 		TypeCoercionUtility _coercion;
 
@@ -196,18 +196,18 @@ namespace DLD.JsonFx
 			set => _dateTimeSerializer = value;
 		}
 
-		public void SetFieldSerializationRule(FieldSerializationRuleType newVal)
+		public void SetFieldSerializationRule(SerializationRuleType newVal)
 		{
-			_shouldFieldBeSerialized = newVal;
+			_shouldBeSerialized = newVal;
 			Coercion.SetFieldSerializationRule(newVal);
 		}
 
-		public void SetFieldSerializedName(FieldSerializedNameType newVal)
+		public void SetFieldSerializedName(SerializedNameType newVal)
 		{
-			_fieldSerializedName = newVal;
+			_serializedName = newVal;
 			Coercion.SetFieldSerializedName(newVal);
 		}
-		public FieldSerializedNameType FieldSerializedName => _fieldSerializedName;
+		public SerializedNameType SerializedName => _serializedName;
 
 
 		/// <summary>
@@ -224,7 +224,7 @@ namespace DLD.JsonFx
 		/// </summary>
 		/// <param name="objType"></param>
 		/// <param name="member"></param>
-		/// <param name="value"></param>
+		/// <param name="obj"></param>
 		/// <returns></returns>
 		/// <remarks>
 		/// Checks these in order, if any returns true then this is true:
@@ -235,12 +235,6 @@ namespace DLD.JsonFx
 			if (JsonIgnoreAttribute.IsJsonIgnore(member))
 			{
 				return true;
-			}
-
-			var field = member as FieldInfo;
-			if ((field != null) && (_shouldFieldBeSerialized != null) && _shouldFieldBeSerialized(field))
-			{
-				return false;
 			}
 
 			//If the class is specified as opt-in serialization only, members *must* have the JsonMember attribute

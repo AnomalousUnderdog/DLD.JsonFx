@@ -106,7 +106,7 @@ namespace DLD.JsonFx
 		/// </summary>
 		/// <param name="value"></param>
 		/// <returns></returns>
-		public static string GetJsonName(object value, FieldSerializedNameType customNameType = null)
+		public static string GetJsonName(object value, SerializedNameType customNameType = null)
 		{
 			if (value == null)
 			{
@@ -143,8 +143,6 @@ namespace DLD.JsonFx
 				{
 					return EcmaScriptIdentifier.EnsureValidIdentifier(customName, false);
 				}
-
-				return null;
 			}
 
 #if WINDOWS_STORE

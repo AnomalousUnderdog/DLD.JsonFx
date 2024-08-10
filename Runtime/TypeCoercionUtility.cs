@@ -48,7 +48,7 @@ namespace DLD.JsonFx
 {
 	public interface ISerializationRule
 	{
-		FieldSerializationRuleType ShouldFieldBeSerialized { get; }
+		SerializationRuleType ShouldBeSerialized { get; }
 	}
 
 
@@ -72,17 +72,17 @@ namespace DLD.JsonFx
 
 		readonly ConcurrentDictionary<string, TP> _hintedTypeCache = new ConcurrentDictionary<string, TP>();
 
-		FieldSerializationRuleType _shouldFieldBeSerialized;
+		SerializationRuleType _shouldBeSerialized;
 
-		public void SetFieldSerializationRule(FieldSerializationRuleType newVal)
+		public void SetFieldSerializationRule(SerializationRuleType newVal)
 		{
-			_shouldFieldBeSerialized = newVal;
+			_shouldBeSerialized = newVal;
 		}
 
-		FieldSerializedNameType _fieldSerializedName;
-		public void SetFieldSerializedName(FieldSerializedNameType newVal)
+		SerializedNameType _serializedName;
+		public void SetFieldSerializedName(SerializedNameType newVal)
 		{
-			_fieldSerializedName = newVal;
+			_serializedName = newVal;
 		}
 
 		#endregion Fields
@@ -369,9 +369,9 @@ namespace DLD.JsonFx
 				{
 					FieldInfo field = fields[j];
 
-					if (_shouldFieldBeSerialized != null)
+					if (_shouldBeSerialized != null)
 					{
-						if (!_shouldFieldBeSerialized(field))
+						if (!_shouldBeSerialized(field))
 						{
 							//Debug.LogFormat("won't serialize {0} because of rule", field.Name);
 							continue;
@@ -393,7 +393,7 @@ namespace DLD.JsonFx
 						continue;
 					}
 
-					string fieldName = JsonNameAttribute.GetJsonName(field, _fieldSerializedName);
+					string fieldName = JsonNameAttribute.GetJsonName(field, _serializedName);
 					if (string.IsNullOrEmpty(fieldName))
 						fieldName = field.Name;
 
@@ -423,6 +423,16 @@ namespace DLD.JsonFx
 						continue;
 					}
 
+					if (_shouldBeSerialized != null)
+					{
+						if (!_shouldBeSerialized(property))
+						{
+							//Debug.LogFormat("won't serialize {0} because of rule", field.Name);
+							continue;
+						}
+						//Debug.LogFormat("will serialize {0} because of rule", field.Name);
+					}
+
 					if (settings.IsIgnored(objectType, property, null))
 					{
 						//if (Settings.DebugMode)
@@ -437,9 +447,8 @@ namespace DLD.JsonFx
 						continue;
 					}
 
-
 					// use Attributes here to control naming
-					string propertyName = JsonNameAttribute.GetJsonName(property, _fieldSerializedName);
+					string propertyName = JsonNameAttribute.GetJsonName(property, _serializedName);
 					if (string.IsNullOrEmpty(propertyName))
 						propertyName = property.Name;
 
@@ -509,12 +518,20 @@ namespace DLD.JsonFx
 						continue;
 					}
 
+					if (_shouldBeSerialized != null)
+					{
+						if (!_shouldBeSerialized(info))
+						{
+							continue;
+						}
+					}
+
 					if (JsonIgnoreAttribute.IsJsonIgnore(info))
 					{
 						continue;
 					}
 
-					string jsonName = JsonNameAttribute.GetJsonName(info, _fieldSerializedName);
+					string jsonName = JsonNameAttribute.GetJsonName(info, _serializedName);
 
 					//Debug.LogFormat("....will deserialize property {0} as {1}", info.Name, jsonName);
 
@@ -537,9 +554,9 @@ namespace DLD.JsonFx
 				{
 					//Debug.LogFormat("....found field {0}. <b>{1}</b>", info.Name, ShouldFieldBeSerialized == null ? "ShouldFieldBeSerialized is null!" : "ShouldFieldBeSerialized is being used!");
 
-					if (_shouldFieldBeSerialized != null)
+					if (_shouldBeSerialized != null)
 					{
-						if (!_shouldFieldBeSerialized(info))
+						if (!_shouldBeSerialized(info))
 						{
 							//Debug.LogFormat("....not deserializing {0} because of rule", info.Name);
 							continue;
@@ -562,7 +579,7 @@ namespace DLD.JsonFx
 						continue;
 					}
 
-					string jsonName = JsonNameAttribute.GetJsonName(info, _fieldSerializedName);
+					string jsonName = JsonNameAttribute.GetJsonName(info, _serializedName);
 					if (string.IsNullOrEmpty(jsonName))
 					{
 						memberMap[info.Name] = info;
@@ -680,7 +697,7 @@ namespace DLD.JsonFx
 						// if isn't a defined value perhaps it is the JsonName
 						foreach (FieldInfo field in GetTypeInfo(targetType).GetFields())
 						{
-							string jsonName = JsonNameAttribute.GetJsonName(field, _fieldSerializedName);
+							string jsonName = JsonNameAttribute.GetJsonName(field, _serializedName);
 							if (((string)value).Equals(jsonName))
 							{
 								value = field.Name;
