@@ -331,6 +331,9 @@ namespace DLD.JsonFx
 			KeyValuePair<KeyValuePair<string, FieldInfo>[], KeyValuePair<string, PropertyInfo>[]> pair;
 			if (_writingMaps.TryGetValue(objectType, out pair))
 			{
+#if JSONFX_DEBUG
+				Debug.Log($"For {objectType.FullName}, reusing existing WritingMap. Fields: {pair.Key.Length} Properties: {pair.Value.Length}");
+#endif
 				outFields = pair.Key;
 				outProps = pair.Value;
 				return;
@@ -358,6 +361,12 @@ namespace DLD.JsonFx
 				tp = tp.BaseType;
 			}
 
+#if JSONFX_DEBUG
+			var sb = new System.Text.StringBuilder();
+			sb.Append("Creating new WritingMap for ");
+			sb.AppendLine(objectType.FullName);
+#endif
+
 			// iterate through the inheritance chain in reverse so that we start at the base type
 			for (int tpIdx = typeChain.Count - 1; tpIdx >= 0; --tpIdx)
 			{
@@ -365,37 +374,63 @@ namespace DLD.JsonFx
 				                                                BindingFlags.Public |
 				                                                BindingFlags.NonPublic |
 				                                                BindingFlags.DeclaredOnly);
+
+#if JSONFX_DEBUG
+				sb.Append("Fields in ");
+				sb.Append(typeChain[tpIdx].Name);
+				sb.Append(": ");
+				sb.Append(fields.Length);
+				sb.AppendLine();
+#endif
 				for (int j = 0; j < fields.Length; j++)
 				{
 					FieldInfo field = fields[j];
 
+#if JSONFX_DEBUG
+					sb.Append(j+1);
+					sb.Append(". ");
+					sb.Append(field.Name);
+					sb.Append(":");
+#endif
 					if (_shouldBeSerialized != null)
 					{
 						if (!_shouldBeSerialized(field))
 						{
-							//Debug.LogFormat("won't serialize {0} because of rule", field.Name);
+#if JSONFX_DEBUG
+							sb.AppendLine(" Cannot serialize, because of SerializationRule");
+#endif
 							continue;
 						}
-						//Debug.LogFormat("will serialize {0} because of rule", field.Name);
+#if JSONFX_DEBUG
+						sb.Append(" Will serialize, because of SerializationRule.");
+#endif
 					}
 					else if (field.IsStatic ||
 					         (!field.IsPublic && field.GetCustomAttributes(typeof(JsonMemberAttribute), true).Length == 0))
 					{
-						//if (Settings.DebugMode)
-						//	Console.WriteLine ("Cannot serialize " + field.Name + " : not public or is static (and does not have a JsonMember attribute)");
+#if JSONFX_DEBUG
+						sb.AppendLine(" Cannot serialize, not public or is static (and does not have a JsonMember attribute)");
+#endif
 						continue;
 					}
 
 					if (settings.IsIgnored(objectType, field, null))
 					{
-						//if (Settings.DebugMode)
-						//	Console.WriteLine ("Cannot serialize " + field.Name + " : ignored by settings");
+#if JSONFX_DEBUG
+						sb.AppendLine(" Cannot serialize, ignored by settings");
+#endif
 						continue;
 					}
 
 					string fieldName = JsonNameAttribute.GetJsonName(field, _serializedName);
 					if (string.IsNullOrEmpty(fieldName))
 						fieldName = field.Name;
+
+#if JSONFX_DEBUG
+					sb.Append(" Serialized as \"");
+					sb.Append(fieldName);
+					sb.AppendLine("\"");
+#endif
 
 					_fieldList.Add(new KeyValuePair<string, FieldInfo>(fieldName, field));
 				}
@@ -404,22 +439,37 @@ namespace DLD.JsonFx
 				                                                           BindingFlags.Public |
 				                                                           BindingFlags.NonPublic |
 				                                                           BindingFlags.DeclaredOnly);
+
+#if JSONFX_DEBUG
+				sb.Append("Properties in ");
+				sb.Append(typeChain[tpIdx].Name);
+				sb.Append(": ");
+				sb.Append(properties.Length);
+				sb.AppendLine();
+#endif
 				for (int j = 0; j < properties.Length; j++)
 				{
 					PropertyInfo property = properties[j];
 
-					//Console.WriteLine (property.Name);
+#if JSONFX_DEBUG
+					sb.Append(j+1);
+					sb.Append(". ");
+					sb.Append(property.Name);
+					sb.Append(":");
+#endif
 					if (!property.CanRead)
 					{
-						//if (Settings.DebugMode)
-						//	Console.WriteLine ("Cannot serialize "+property.Name+" : cannot read");
+#if JSONFX_DEBUG
+						sb.AppendLine(" Cannot serialize, cannot read");
+#endif
 						continue;
 					}
 
 					if (!property.CanWrite && !anonymousType)
 					{
-						//if (Settings.DebugMode)
-						//	Console.WriteLine ("Cannot serialize "+property.Name+" : cannot write");
+#if JSONFX_DEBUG
+						sb.AppendLine(" Cannot serialize, cannot write");
+#endif
 						continue;
 					}
 
@@ -427,23 +477,29 @@ namespace DLD.JsonFx
 					{
 						if (!_shouldBeSerialized(property))
 						{
-							//Debug.LogFormat("won't serialize {0} because of rule", field.Name);
+#if JSONFX_DEBUG
+							sb.AppendLine(" Cannot serialize, because of SerializationRule");
+#endif
 							continue;
 						}
-						//Debug.LogFormat("will serialize {0} because of rule", field.Name);
+#if JSONFX_DEBUG
+						sb.Append(" Will serialize, because of SerializationRule.");
+#endif
 					}
 
 					if (settings.IsIgnored(objectType, property, null))
 					{
-						//if (Settings.DebugMode)
-						//	Console.WriteLine ("Cannot serialize "+property.Name+" : is ignored by settings");
+#if JSONFX_DEBUG
+						sb.AppendLine(" Cannot serialize, is ignored by settings");
+#endif
 						continue;
 					}
 
 					if (property.GetIndexParameters().Length != 0)
 					{
-						//if (Settings.DebugMode)
-						//	Console.WriteLine ("Cannot serialize "+property.Name+" : is indexed");
+#if JSONFX_DEBUG
+						sb.AppendLine(" Cannot serialize, is indexed");
+#endif
 						continue;
 					}
 
@@ -451,6 +507,12 @@ namespace DLD.JsonFx
 					string propertyName = JsonNameAttribute.GetJsonName(property, _serializedName);
 					if (string.IsNullOrEmpty(propertyName))
 						propertyName = property.Name;
+
+#if JSONFX_DEBUG
+					sb.Append(" Serialized as \"");
+					sb.Append(propertyName);
+					sb.AppendLine("\"");
+#endif
 
 					_propList.Add(new KeyValuePair<string, PropertyInfo>(propertyName, property));
 				}
@@ -461,6 +523,16 @@ namespace DLD.JsonFx
 
 			pair = new KeyValuePair<KeyValuePair<string, FieldInfo>[], KeyValuePair<string, PropertyInfo>[]>(outFields,
 				outProps);
+
+#if JSONFX_DEBUG
+			sb.Append("Fields: ");
+			sb.Append(outFields.Length);
+			sb.Append(", ");
+			sb.Append("Properties: ");
+			sb.Append(outProps.Length);
+			sb.AppendLine();
+			Debug.Log(sb.ToString());
+#endif
 
 			_writingMaps[objectType] = pair;
 		}
@@ -493,6 +565,9 @@ namespace DLD.JsonFx
 
 			if (MemberMapCache.TryGetValue(objectType, out memberMap))
 			{
+#if JSONFX_DEBUG
+				Debug.Log($"For {objectType.FullName}, reusing existing MemberMap. Members: {memberMap.Count}");
+#endif
 				// map was stored in cache
 				return memberMap;
 			}
@@ -500,21 +575,48 @@ namespace DLD.JsonFx
 			// create a new map
 			memberMap = new Dictionary<string, MemberInfo>();
 
-			//Debug.LogFormat("creating new member map for {0}", objectType.Name);
+
+#if JSONFX_DEBUG
+			var sb = new System.Text.StringBuilder();
+			sb.Append("Creating new MemberMap for ");
+			sb.AppendLine(objectType.FullName);
+#endif
 
 			// load properties into property map
 			Type tp = objectType;
 			while (tp != null)
 			{
-				//Debug.LogFormat("..going inside {0}", tp.Name);
+#if JSONFX_DEBUG
+				sb.Append("..going inside ");
+				sb.AppendLine(tp.Name);
+#endif
 
 				PropertyInfo[] properties = GetTypeInfo(tp)
 					.GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+
+#if JSONFX_DEBUG
+				sb.Append("Properties in ");
+				sb.Append(tp.Name);
+				sb.Append(": ");
+				sb.Append(properties.Length);
+				sb.AppendLine();
+#endif
 				for (int i = 0; i < properties.Length; i++)
 				{
 					PropertyInfo info = properties[i];
+
+#if JSONFX_DEBUG
+					sb.Append(i+1);
+					sb.Append(". ");
+					sb.Append(info.Name);
+					sb.Append(":");
+#endif
+
 					if (!info.CanRead || !info.CanWrite)
 					{
+#if JSONFX_DEBUG
+						sb.AppendLine(" Skipping property, can't read/write");
+#endif
 						continue;
 					}
 
@@ -522,8 +624,14 @@ namespace DLD.JsonFx
 					{
 						if (!_shouldBeSerialized(info))
 						{
+#if JSONFX_DEBUG
+							sb.AppendLine(" Not deserializing, because of SerializationRule");
+#endif
 							continue;
 						}
+#if JSONFX_DEBUG
+						sb.Append(" Will deserialize, because of SerializationRule.");
+#endif
 					}
 
 					if (JsonIgnoreAttribute.IsJsonIgnore(info))
@@ -533,7 +641,10 @@ namespace DLD.JsonFx
 
 					string jsonName = JsonNameAttribute.GetJsonName(info, _serializedName);
 
-					//Debug.LogFormat("....will deserialize property {0} as {1}", info.Name, jsonName);
+#if JSONFX_DEBUG
+					sb.Append($" Will deserialize property as \"{jsonName}\"");
+					sb.AppendLine();
+#endif
 
 					if (string.IsNullOrEmpty(jsonName))
 					{
@@ -550,18 +661,36 @@ namespace DLD.JsonFx
 				                                               BindingFlags.Public |
 				                                               BindingFlags.Instance |
 				                                               BindingFlags.DeclaredOnly);
-				foreach (FieldInfo info in fields)
+
+#if JSONFX_DEBUG
+				sb.Append("Fields in ");
+				sb.Append(tp.Name);
+				sb.Append(": ");
+				sb.Append(fields.Length);
+				sb.AppendLine();
+#endif
+				for (int i = 0; i < fields.Length; i++)
 				{
-					//Debug.LogFormat("....found field {0}. <b>{1}</b>", info.Name, ShouldFieldBeSerialized == null ? "ShouldFieldBeSerialized is null!" : "ShouldFieldBeSerialized is being used!");
+					FieldInfo info = fields[i];
+#if JSONFX_DEBUG
+					sb.Append(i+1);
+					sb.Append(". ");
+					sb.Append(info.Name);
+					sb.Append(":");
+#endif
 
 					if (_shouldBeSerialized != null)
 					{
 						if (!_shouldBeSerialized(info))
 						{
-							//Debug.LogFormat("....not deserializing {0} because of rule", info.Name);
+#if JSONFX_DEBUG
+							sb.AppendLine(" Not deserializing, because of SerializationRule");
+#endif
 							continue;
 						}
-						//Debug.LogFormat("....will deserialize {0} because of rule", info.Name);
+#if JSONFX_DEBUG
+						sb.Append(" Will deserialize, because of SerializationRule.");
+#endif
 					}
 					else if (!info.IsPublic &&
 #if WINDOWS_STORE
@@ -580,6 +709,12 @@ namespace DLD.JsonFx
 					}
 
 					string jsonName = JsonNameAttribute.GetJsonName(info, _serializedName);
+
+#if JSONFX_DEBUG
+					sb.Append($" Will deserialize field as \"{jsonName}\"");
+					sb.AppendLine();
+#endif
+
 					if (string.IsNullOrEmpty(jsonName))
 					{
 						memberMap[info.Name] = info;
@@ -592,6 +727,13 @@ namespace DLD.JsonFx
 
 				tp = tp.BaseType;
 			}
+
+#if JSONFX_DEBUG
+			sb.Append("Members: ");
+			sb.Append(memberMap.Count);
+			sb.AppendLine();
+			Debug.Log(sb.ToString());
+#endif
 
 			// store in cache for repeated usage
 			MemberMapCache[objectType] = memberMap;
