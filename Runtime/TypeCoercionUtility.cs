@@ -641,19 +641,15 @@ namespace DLD.JsonFx
 
 					string jsonName = JsonNameAttribute.GetJsonName(info, _serializedName);
 
+					if (string.IsNullOrEmpty(jsonName))
+						jsonName = info.Name;
+
 #if JSONFX_DEBUG
 					sb.Append($" Will deserialize property as \"{jsonName}\"");
 					sb.AppendLine();
 #endif
 
-					if (string.IsNullOrEmpty(jsonName))
-					{
-						memberMap[info.Name] = info;
-					}
-					else
-					{
-						memberMap[jsonName] = info;
-					}
+					memberMap[jsonName] = info;
 				}
 
 				// load public fields into property map
@@ -710,19 +706,15 @@ namespace DLD.JsonFx
 
 					string jsonName = JsonNameAttribute.GetJsonName(info, _serializedName);
 
+					if (string.IsNullOrEmpty(jsonName))
+						jsonName = info.Name;
+
 #if JSONFX_DEBUG
 					sb.Append($" Will deserialize field as \"{jsonName}\"");
 					sb.AppendLine();
 #endif
 
-					if (string.IsNullOrEmpty(jsonName))
-					{
-						memberMap[info.Name] = info;
-					}
-					else
-					{
-						memberMap[jsonName] = info;
-					}
+					memberMap[jsonName] = info;
 				}
 
 				tp = tp.BaseType;
