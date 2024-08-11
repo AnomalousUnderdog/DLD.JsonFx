@@ -80,6 +80,7 @@ namespace DLD.JsonFx
 		}
 
 		SerializedNameType _serializedName;
+
 		public void SetFieldSerializedName(SerializedNameType newVal)
 		{
 			_serializedName = newVal;
@@ -405,21 +406,24 @@ namespace DLD.JsonFx
 						sb.Append(" Will serialize, because of SerializationRule.");
 #endif
 					}
-					else if (field.IsStatic ||
-					         (!field.IsPublic && field.GetCustomAttributes(typeof(JsonMemberAttribute), true).Length == 0))
+					else
 					{
+						if (field.IsStatic ||
+						    (!field.IsPublic && field.GetCustomAttributes(typeof(JsonMemberAttribute), true).Length == 0))
+						{
 #if JSONFX_DEBUG
-						sb.AppendLine(" Cannot serialize, not public or is static (and does not have a JsonMember attribute)");
+							sb.AppendLine(" Cannot serialize, not public or is static (and does not have a JsonMember attribute)");
 #endif
-						continue;
-					}
+							continue;
+						}
 
-					if (settings.IsIgnored(objectType, field, null))
-					{
+						if (settings.IsIgnored(objectType, field, null))
+						{
 #if JSONFX_DEBUG
-						sb.AppendLine(" Cannot serialize, ignored by settings");
+							sb.AppendLine(" Cannot serialize, ignored by settings");
 #endif
-						continue;
+							continue;
+						}
 					}
 
 					string fieldName = JsonNameAttribute.GetJsonName(field, _serializedName);
@@ -473,6 +477,14 @@ namespace DLD.JsonFx
 						continue;
 					}
 
+					if (property.GetIndexParameters().Length != 0)
+					{
+#if JSONFX_DEBUG
+						sb.AppendLine(" Cannot serialize, is indexed");
+#endif
+						continue;
+					}
+
 					if (_shouldBeSerialized != null)
 					{
 						if (!_shouldBeSerialized(property))
@@ -486,21 +498,15 @@ namespace DLD.JsonFx
 						sb.Append(" Will serialize, because of SerializationRule.");
 #endif
 					}
-
-					if (settings.IsIgnored(objectType, property, null))
+					else
 					{
+						if (settings.IsIgnored(objectType, property, null))
+						{
 #if JSONFX_DEBUG
-						sb.AppendLine(" Cannot serialize, is ignored by settings");
+							sb.AppendLine(" Cannot serialize, is ignored by settings");
 #endif
-						continue;
-					}
-
-					if (property.GetIndexParameters().Length != 0)
-					{
-#if JSONFX_DEBUG
-						sb.AppendLine(" Cannot serialize, is indexed");
-#endif
-						continue;
+							continue;
+						}
 					}
 
 					// use Attributes here to control naming
@@ -633,14 +639,12 @@ namespace DLD.JsonFx
 						sb.Append(" Will deserialize, because of SerializationRule.");
 #endif
 					}
-
-					if (JsonIgnoreAttribute.IsJsonIgnore(info))
+					else if (JsonIgnoreAttribute.IsJsonIgnore(info))
 					{
 						continue;
 					}
 
 					string jsonName = JsonNameAttribute.GetJsonName(info, _serializedName);
-
 					if (string.IsNullOrEmpty(jsonName))
 						jsonName = info.Name;
 
@@ -688,24 +692,26 @@ namespace DLD.JsonFx
 						sb.Append(" Will deserialize, because of SerializationRule.");
 #endif
 					}
-					else if (!info.IsPublic &&
+					else
+					{
+						if (!info.IsPublic &&
 #if WINDOWS_STORE
-						info.GetCustomAttribute<JsonMemberAttribute>(false) == null
+						    info.GetCustomAttribute<JsonMemberAttribute>(false) == null
 #else
-					         info.GetCustomAttributes(typeof(JsonMemberAttribute), false).Length == 0
+						    info.GetCustomAttributes(typeof(JsonMemberAttribute), false).Length == 0
 #endif
-					        )
-					{
-						continue;
-					}
+						    )
+						{
+							continue;
+						}
 
-					if (JsonIgnoreAttribute.IsJsonIgnore(info))
-					{
-						continue;
+						if (JsonIgnoreAttribute.IsJsonIgnore(info))
+						{
+							continue;
+						}
 					}
 
 					string jsonName = JsonNameAttribute.GetJsonName(info, _serializedName);
-
 					if (string.IsNullOrEmpty(jsonName))
 						jsonName = info.Name;
 
